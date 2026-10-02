@@ -157,10 +157,14 @@ If `test_cuda_is_available` fails: run `uv run python -c "import torch; print(to
 - [ ] **Step 6: Commit and push**
 
 ```bash
-git add pyproject.toml uv.lock .python-version .gitignore src/vball/__init__.py tests/test_smoke.py docs
+git add pyproject.toml uv.lock .python-version .gitignore src/vball/__init__.py tests/test_smoke.py
 git commit -m "chore: scaffold vball project with uv, torch cu130, pytest" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
-git remote add origin https://github.com/MatusGib/vball.git
-git push -u origin main
+git push
+```
+(The repo, `origin` remote and `.gitignore` already exist from the planning commit; Step 3 rewrites `.gitignore` with identical content.)
+
+```bash
+git status --short   # expected: empty
 ```
 
 ---
