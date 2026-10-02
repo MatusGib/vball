@@ -1,4 +1,7 @@
+import cv2
+import numpy as np
 from fastapi.testclient import TestClient
+from helpers import make_test_video, requires_ffmpeg
 
 from vball import store
 from vball.config import Paths
@@ -78,3 +81,34 @@ def test_index_page(tmp_path):
     res = client.get("/")
     assert res.status_code == 200 and "<title>vball</title>" in res.text
     assert client.get("/app.js").status_code == 200
+
+
+def test_ball_test_is_sampled_once_from_rallies(tmp_path):
+    client, match_id = make_client(tmp_path)  # rallies at frames 30-300 and 450-600
+    first = client.get(f"/api/matches/{match_id}/ball-test?n=10").json()
+    assert len(first) == 10
+    assert all(i["status"] == "todo" for i in first)
+    assert all(30 <= i["frame"] < 300 or 450 <= i["frame"] < 600 for i in first)
+    assert client.get(f"/api/matches/{match_id}/ball-test?n=50").json() == first  # persisted, not resampled
+
+
+def test_ball_test_update(tmp_path):
+    client, match_id = make_client(tmp_path)
+    frame = client.get(f"/api/matches/{match_id}/ball-test?n=5").json()[0]["frame"]
+    res = client.put(f"/api/matches/{match_id}/ball-test/{frame}", json={"status": "ball", "x": 12.5, "y": 30.0})
+    assert res.json() == {"frame": frame, "status": "ball", "x": 12.5, "y": 30.0}
+    assert client.get(f"/api/matches/{match_id}/ball-test").json()[0]["status"] == "ball"
+    assert client.put(f"/api/matches/{match_id}/ball-test/99999", json={"status": "none"}).status_code == 404
+    assert client.put(f"/api/matches/{match_id}/ball-test/{frame}", json={"status": "maybe"}).status_code == 422
+
+
+@requires_ffmpeg
+def test_frame_jpeg(tmp_path):
+    client, match_id = make_client(tmp_path)  # work video is a placeholder; replace with a real one
+    video = tmp_path / "data" / "matches" / str(match_id) / "work.mp4"
+    make_test_video(video, seconds=2, fps=25)
+    res = client.get(f"/api/matches/{match_id}/frames/10.jpg")
+    assert res.status_code == 200 and res.headers["content-type"] == "image/jpeg"
+    image = cv2.imdecode(np.frombuffer(res.content, np.uint8), cv2.IMREAD_COLOR)
+    assert image.shape == (240, 320, 3)
+    assert client.get(f"/api/matches/{match_id}/frames/100000.jpg").status_code == 404
