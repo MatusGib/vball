@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>vball</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <header>
+    <h1>vball</h1>
+    <select id="match" aria-label="Match"></select>
+    <label><input type="checkbox" id="continuous" checked> Rallies only</label>
+    <label>Speed
+      <select id="speed">
+        <option value="1">1×</option>
+        <option value="1.5">1.5×</option>
+        <option value="2">2×</option>
+      </select>
+    </label>
+  </header>
+  <main>
+    <section>
+      <video id="video" controls preload="metadata"></video>
+      <p class="help">N / P: next / previous rally · S: mark rally start (serve toss) · E: mark rally end (ball dead) · U: undo last label</p>
+    </section>
+    <aside>
+      <h2>Rallies <span id="rally-count"></span></h2>
+      <ol id="rallies"></ol>
+      <h2>Ground-truth labels <span id="label-count"></span></h2>
+      <p id="pending" class="help"></p>
+      <button id="download">Download GT CSV</button>
+      <button id="clear">Clear labels</button>
+    </aside>
+  </main>
+  <script src="/app.js"></script>
+</body>
+</html>
