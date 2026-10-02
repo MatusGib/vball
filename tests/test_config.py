@@ -9,6 +9,7 @@ def test_match_file_layout(tmp_path):
     assert paths.match_dir(3) == tmp_path / "matches" / "3"
     assert paths.work_video(3) == tmp_path / "matches" / "3" / "work.mp4"
     assert paths.ball_csv(3) == tmp_path / "matches" / "3" / "ball.csv"
+    assert paths.gt_csv(3) == tmp_path / "matches" / "3" / "gt_rallies.csv"
 
 
 def test_default_paths_respects_env(tmp_path, monkeypatch):

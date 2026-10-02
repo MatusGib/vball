@@ -29,6 +29,10 @@ class Paths:
     def ball_csv(self, match_id: int) -> Path:
         return self.match_dir(match_id) / "ball.csv"
 
+    def gt_csv(self, match_id: int) -> Path:
+        """Hand-labelled rally intervals saved by the web app."""
+        return self.match_dir(match_id) / "gt_rallies.csv"
+
 
 def default_paths() -> Paths:
     return Paths(Path(os.environ.get("VBALL_DATA", REPO_ROOT / "data")))

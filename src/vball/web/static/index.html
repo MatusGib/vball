@@ -10,7 +10,7 @@
   <header>
     <h1>vball</h1>
     <select id="match" aria-label="Match"></select>
-    <label><input type="checkbox" id="continuous" checked> Rallies only</label>
+    <label title="Jump straight to the next detected rally when one ends"><input type="checkbox" id="continuous" checked> Rallies only</label>
     <label>Speed
       <select id="speed">
         <option value="1">1×</option>
@@ -20,17 +20,41 @@
     </label>
   </header>
   <main>
-    <section>
+    <section class="player">
       <video id="video" controls preload="metadata"></video>
-      <p class="help">N / P: next / previous rally · S: mark rally start (serve toss) · E: mark rally end (ball dead) · U: undo last label</p>
+      <div id="timeline" class="timeline" title="Click to jump. Blue: detected rallies. Green: your labels. Red: rally being recorded.">
+        <div id="tl-detected" class="tl-row tl-detected"></div>
+        <div id="tl-labels" class="tl-row tl-labels"></div>
+        <div id="tl-head" class="tl-head"></div>
+      </div>
+      <div id="status" class="status idle" role="status" aria-live="polite">
+        <span id="state" class="state"></span>
+        <span id="message" class="message"></span>
+      </div>
+      <div class="controls">
+        <button id="btn-prev" title="Previous detected rally (P)">◀ Prev rally <kbd>P</kbd></button>
+        <button id="btn-next" title="Next detected rally (N)">Next rally ▶ <kbd>N</kbd></button>
+        <span class="sep"></span>
+        <button id="btn-start" class="primary" title="Mark the serve toss (S)">Mark start <kbd>S</kbd></button>
+        <button id="btn-end" class="primary" title="Mark the moment the ball is dead (E)">Mark end <kbd>E</kbd></button>
+        <button id="btn-cancel" title="Discard the open start mark (Esc)">Cancel <kbd>Esc</kbd></button>
+        <button id="btn-undo" title="Undo the last label change (U)">Undo <kbd>U</kbd></button>
+      </div>
     </section>
     <aside>
-      <h2>Rallies <span id="rally-count"></span></h2>
-      <ol id="rallies"></ol>
-      <h2>Ground-truth labels <span id="label-count"></span></h2>
-      <p id="pending" class="help"></p>
-      <button id="download">Download GT CSV</button>
-      <button id="clear">Clear labels</button>
+      <section>
+        <div class="section-head">
+          <h2>Your labels <span id="label-count" class="badge">0</span></h2>
+          <span id="save-state" class="save-state"></span>
+        </div>
+        <p class="help">Label each rally from serve toss to ball dead. Use <em>start = now</em> / <em>end = now</em> to fix a label at the current video time.</p>
+        <button id="btn-import" title="Copy the detected rallies into your labels so you only correct them">Start from detected rallies</button>
+        <ol id="labels" class="list"></ol>
+      </section>
+      <section>
+        <h2>Detected rallies <span id="rally-count" class="badge">0</span></h2>
+        <ol id="rallies" class="list"></ol>
+      </section>
     </aside>
   </main>
   <script src="/app.js"></script>

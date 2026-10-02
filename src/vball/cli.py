@@ -25,9 +25,9 @@ def build_parser() -> argparse.ArgumentParser:
     e.add_argument("match_id", type=int)
     e.add_argument("--out", type=Path)
 
-    v = sub.add_parser("eval", help="compare detected rallies with a ground-truth CSV (start_s,end_s)")
+    v = sub.add_parser("eval", help="compare detected rallies with hand labels (start_s,end_s CSV)")
     v.add_argument("match_id", type=int)
-    v.add_argument("gt_csv", type=Path)
+    v.add_argument("gt_csv", type=Path, nargs="?", help="defaults to the labels saved in the web app")
 
     s = sub.add_parser("serve", help="start the web app")
     s.add_argument("--port", type=int, default=8000)
@@ -70,8 +70,12 @@ def main(argv: list[str] | None = None) -> int:
             print(f"wrote {out}")
 
         elif args.command == "eval":
+            gt_path = args.gt_csv or paths.gt_csv(args.match_id)
+            if not gt_path.exists():
+                print(f"no labels at {gt_path}; label rallies in the web app first", file=sys.stderr)
+                return 1
             pred = [(r["start_s"], r["end_s"]) for r in store.get_rallies(conn, args.match_id)]
-            gt = load_intervals_csv(args.gt_csv)
+            gt = load_intervals_csv(gt_path)
             print(rally_metrics(restrict_to_span(pred, gt), gt).summary())
             duration_s = match["n_frames"] / match["fps"]
             kept_s = sum(end - start for start, end in pred)
