@@ -3,6 +3,8 @@ import sys
 from pathlib import Path
 
 from vball import pipeline, store
+from vball.ball.metrics import ball_metrics, tolerance_px
+from vball.ball.testset import load_ball_test
 from vball.ball.track import load_tracknet_csv
 from vball.ball.tracknet import run_tracknet
 from vball.config import TRACKNET_THRESHOLD, TRACKNET_WEIGHTS, default_paths
@@ -36,6 +38,10 @@ def build_parser() -> argparse.ArgumentParser:
     t.add_argument("--weights", type=Path, default=TRACKNET_WEIGHTS)
     t.add_argument("--threshold", type=float, default=TRACKNET_THRESHOLD)
     t.add_argument("--out", type=Path, help="write here instead of the match's ball.csv (rallies are left alone)")
+
+    b = sub.add_parser("balleval", help="score a ball track against the frames clicked on the Ball check page")
+    b.add_argument("match_id", type=int)
+    b.add_argument("--pred", type=Path, help="ball CSV to score (default: the match's ball.csv)")
 
     s = sub.add_parser("serve", help="start the web app")
     s.add_argument("--port", type=int, default=8000)
@@ -83,6 +89,17 @@ def main(argv: list[str] | None = None) -> int:
             print(f"wrote {out}")
             if args.out is None:
                 print(f"{len(pipeline.redetect(conn, paths, args.match_id))} rallies")
+
+        elif args.command == "balleval":
+            test_path = paths.ball_test_csv(args.match_id)
+            if not test_path.exists():
+                print("no ball test frames yet; click them on the Ball check page (/ball.html)", file=sys.stderr)
+                return 1
+            items = load_ball_test(test_path)
+            track = load_tracknet_csv(args.pred or paths.ball_csv(args.match_id), match["n_frames"])
+            print(ball_metrics(track, items, tolerance_px(match["width"])).summary())
+            done = sum(item.status in ("ball", "none") for item in items)
+            print(f"{done} of {len(items)} test frames labelled")
 
         elif args.command == "export":
             intervals = [(r["start_s"], r["end_s"]) for r in store.get_rallies(conn, args.match_id)]

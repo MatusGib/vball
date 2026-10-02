@@ -86,3 +86,23 @@ def test_track_default_replaces_ball_csv_and_redetects(tmp_path, monkeypatch, ca
     )
     assert main(["track", str(match_id)]) == 0
     assert "0 rallies" in capsys.readouterr().out
+
+
+def test_balleval_scores_against_clicked_frames(tmp_path, monkeypatch, capsys):
+    from vball.ball.testset import BallTestItem, save_ball_test
+
+    match_id = seed(tmp_path, monkeypatch)  # ball flies 10-18 s and 30-36 s at y=360
+    save_ball_test(
+        default_paths().ball_test_csv(match_id),
+        [BallTestItem(10 * 30 + 1, "ball", 60.0, 360.0), BallTestItem(100, "none"), BallTestItem(101)],
+    )
+    assert main(["balleval", str(match_id)]) == 0
+    out = capsys.readouterr().out
+    assert "TP 1 FP 0 FN 0 TN 1" in out
+    assert "2 of 3 test frames labelled" in out
+
+
+def test_balleval_without_test_frames_explains(tmp_path, monkeypatch, capsys):
+    match_id = seed(tmp_path, monkeypatch)
+    assert main(["balleval", str(match_id)]) == 1
+    assert "Ball check" in capsys.readouterr().err
