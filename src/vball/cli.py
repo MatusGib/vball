@@ -43,6 +43,15 @@ def build_parser() -> argparse.ArgumentParser:
     b.add_argument("match_id", type=int)
     b.add_argument("--pred", type=Path, help="ball CSV to score (default: the match's ball.csv)")
 
+    f = sub.add_parser("finetune", help="fine-tune TrackNet on pseudo-labels from processed matches")
+    f.add_argument("--matches", type=int, nargs="+", required=True, help="training match ids (never the held-out ones)")
+    f.add_argument("--out", type=Path, required=True)
+    f.add_argument("--init", type=Path, default=TRACKNET_WEIGHTS)
+    f.add_argument("--windows", type=int, default=2000)
+    f.add_argument("--epochs", type=int, default=4)
+    f.add_argument("--batch-size", type=int, default=2)
+    f.add_argument("--rebuild-cache", action="store_true", help="needed whenever --matches changes")
+
     s = sub.add_parser("serve", help="start the web app")
     s.add_argument("--port", type=int, default=8000)
     return parser
@@ -64,6 +73,22 @@ def main(argv: list[str] | None = None) -> int:
 
         print(f"open http://127.0.0.1:{args.port}")
         uvicorn.run(create_app(paths), host="127.0.0.1", port=args.port)
+        return 0
+
+    if args.command == "finetune":
+        from vball.ball import finetune as ft  # torch-heavy; imported only when needed
+        from vball.ball.train_data import build_cache
+
+        conn = store.connect(paths.db_path)
+        try:
+            sources = ft.prepare_sources(conn, paths, args.matches)
+        finally:
+            conn.close()
+        cache = paths.ball_train_dir
+        if args.rebuild_cache or not (cache / "meta.npz").exists():
+            build_cache(sources, cache, n_windows=args.windows)
+        ft.finetune(cache, args.init, args.out, epochs=args.epochs, batch_size=args.batch_size)
+        print(f"wrote {args.out}")
         return 0
 
     conn = store.connect(paths.db_path)
