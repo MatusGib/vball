@@ -5,6 +5,7 @@ from helpers import make_test_video, make_track, requires_ffmpeg, write_tracknet
 from vball import store
 from vball.config import Paths
 from vball.pipeline import process_match, redetect
+from vball.rallies import RallyParams
 from vball.video import probe
 
 
@@ -27,8 +28,8 @@ def test_process_match_stores_detected_rallies(tmp_path):
     assert match["name"] == "match" and match["fps"] == 30.0
     rallies = store.get_rallies(conn, match_id)
     assert len(rallies) == 1
-    assert abs(rallies[0]["start_s"] - 4.0) < 0.6
-    assert abs(rallies[0]["end_s"] - 13.0) < 0.6
+    assert abs(rallies[0]["start_s"] - (5.0 - RallyParams().pre_pad_s)) < 0.6
+    assert abs(rallies[0]["end_s"] - (12.0 + RallyParams().post_pad_s)) < 0.6
 
 
 @requires_ffmpeg

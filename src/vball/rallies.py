@@ -20,14 +20,15 @@ class Rally:
 
 @dataclass(frozen=True)
 class RallyParams:
+    # Defaults tuned on Kent set 1 (42 labelled rallies, docs/results/phase1-rallies.md).
     min_speed: float = 0.15  # frame diagonals per second; slower = held / rolling ball
     max_speed: float = 4.0  # faster = detector jumping between false positives
     window_s: float = 1.0  # smoothing window for the in-flight signal
-    min_active_frac: float = 0.3  # fraction of in-flight frames in the window to count as active
-    max_gap_s: float = 2.0  # merge active runs separated by at most this
-    min_rally_s: float = 2.0  # drop runs shorter than this
-    pre_pad_s: float = 1.0  # include the serve toss
-    post_pad_s: float = 1.0  # include the ball landing
+    min_active_frac: float = 0.2  # fraction of in-flight frames in the window to count as active
+    max_gap_s: float = 3.0  # merge active runs separated by at most this (ball lost against ceiling)
+    min_rally_s: float = 1.0  # drop runs shorter than this (aces / serve errors are ~1.5 s)
+    pre_pad_s: float = 0.5  # include the serve toss
+    post_pad_s: float = 1.5  # include the ball landing; the tracker loses it before it is dead
 
 
 def ball_speed(track: BallTrack, fps: float, width: int, height: int) -> np.ndarray:

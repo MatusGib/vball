@@ -2,10 +2,11 @@ import numpy as np
 from helpers import FPS, make_track
 
 from vball.ball.track import BallTrack
-from vball.rallies import Rally, ball_speed, detect_rallies
+from vball.rallies import Rally, RallyParams, ball_speed, detect_rallies
 
 W, H = 1280, 720
 N = 60 * FPS  # one minute of video
+P = RallyParams()
 
 
 def detect(track):
@@ -23,8 +24,8 @@ def test_speed_is_in_diagonals_per_second():
 def test_single_flight_becomes_one_padded_rally():
     rallies = detect(make_track(N, flights=[(10, 18)]))
     assert len(rallies) == 1
-    assert abs(rallies[0].start_frame - 9 * FPS) <= 15
-    assert abs(rallies[0].end_frame - 19 * FPS) <= 15
+    assert abs(rallies[0].start_frame - (10 - P.pre_pad_s) * FPS) <= 15
+    assert abs(rallies[0].end_frame - (18 + P.post_pad_s) * FPS) <= 15
 
 
 def test_ball_held_still_is_not_a_rally():
@@ -40,7 +41,10 @@ def test_long_gap_splits_rallies():
 
 
 def test_blip_shorter_than_min_rally_is_dropped():
-    assert detect(make_track(N, flights=[(30, 31)])) == []
+    # smoothing widens a run by about window_s * (1 - 2 * min_active_frac), so the blip must be shorter than that margin
+    widening = P.window_s * (1 - 2 * P.min_active_frac)
+    blip = (P.min_rally_s - widening) * 0.8
+    assert detect(make_track(N, flights=[(30, 30 + blip)])) == []
 
 
 def test_teleporting_false_positives_are_ignored():
