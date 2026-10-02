@@ -57,3 +57,32 @@ def test_unknown_match_returns_error(tmp_path, monkeypatch, capsys):
     seed(tmp_path, monkeypatch)
     assert main(["redetect", "999"]) == 1
     assert "no match with id 999" in capsys.readouterr().err
+
+
+def test_track_to_custom_out_keeps_rallies(tmp_path, monkeypatch, capsys):
+    match_id = seed(tmp_path, monkeypatch)
+    main(["redetect", str(match_id)])
+    calls = []
+
+    def fake_run_tracknet(video, out_csv, weights, threshold, small_video):
+        calls.append({"threshold": threshold, "small_video": small_video})
+        write_tracknet_csv(out_csv, make_track(1800))
+
+    monkeypatch.setattr("vball.cli.run_tracknet", fake_run_tracknet)
+    out = tmp_path / "exp.csv"
+    assert main(["track", str(match_id), "--threshold", "0.3", "--out", str(out)]) == 0
+    assert out.exists()
+    assert calls[0]["threshold"] == 0.3
+    assert calls[0]["small_video"] == default_paths().track_video(match_id)
+    conn = store.connect(default_paths().db_path)
+    assert len(store.get_rallies(conn, match_id)) == 2  # untouched
+
+
+def test_track_default_replaces_ball_csv_and_redetects(tmp_path, monkeypatch, capsys):
+    match_id = seed(tmp_path, monkeypatch)
+    monkeypatch.setattr(
+        "vball.cli.run_tracknet",
+        lambda video, out_csv, weights, threshold, small_video: write_tracknet_csv(out_csv, make_track(1800)),
+    )
+    assert main(["track", str(match_id)]) == 0
+    assert "0 rallies" in capsys.readouterr().out

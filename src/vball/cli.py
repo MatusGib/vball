@@ -4,7 +4,8 @@ from pathlib import Path
 
 from vball import pipeline, store
 from vball.ball.track import load_tracknet_csv
-from vball.config import default_paths
+from vball.ball.tracknet import run_tracknet
+from vball.config import TRACKNET_THRESHOLD, TRACKNET_WEIGHTS, default_paths
 from vball.evaluate import rally_metrics, restrict_to_span, visible_fraction
 from vball.export import export_rallies
 from vball.labels import load_labels
@@ -29,6 +30,12 @@ def build_parser() -> argparse.ArgumentParser:
     v = sub.add_parser("eval", help="compare detected rallies with hand labels (start_s,end_s CSV)")
     v.add_argument("match_id", type=int)
     v.add_argument("gt_csv", type=Path, nargs="?", help="defaults to the labels saved in the web app")
+
+    t = sub.add_parser("track", help="re-run ball tracking on a processed match")
+    t.add_argument("match_id", type=int)
+    t.add_argument("--weights", type=Path, default=TRACKNET_WEIGHTS)
+    t.add_argument("--threshold", type=float, default=TRACKNET_THRESHOLD)
+    t.add_argument("--out", type=Path, help="write here instead of the match's ball.csv (rallies are left alone)")
 
     s = sub.add_parser("serve", help="start the web app")
     s.add_argument("--port", type=int, default=8000)
@@ -63,6 +70,19 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "redetect":
             rallies = pipeline.redetect(conn, paths, args.match_id)
             print(f"{len(rallies)} rallies")
+
+        elif args.command == "track":
+            out = args.out or paths.ball_csv(args.match_id)
+            run_tracknet(
+                paths.work_video(args.match_id),
+                out,
+                weights=args.weights,
+                threshold=args.threshold,
+                small_video=paths.track_video(args.match_id),
+            )
+            print(f"wrote {out}")
+            if args.out is None:
+                print(f"{len(pipeline.redetect(conn, paths, args.match_id))} rallies")
 
         elif args.command == "export":
             intervals = [(r["start_s"], r["end_s"]) for r in store.get_rallies(conn, args.match_id)]
