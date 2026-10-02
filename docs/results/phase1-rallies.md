@@ -12,6 +12,17 @@ Tuning: 2,304-combination grid search (6 s, rules only, cached ball track). The 
 
 Phase 1 target (P ≥ 0.85, R ≥ 0.90): met on this set.
 
+## Validation: Kent set 2 (params unchanged)
+
+25.7 min, 40 labelled rallies (labels started from detections, then false ones deleted and missed ones added).
+
+| Set | Precision | Recall | F1 |
+|---|---|---|---|
+| Kent set 1 (tuned on) | 0.97 | 0.90 | 0.94 |
+| Kent set 2 (held out) | 0.86 | 0.93 | 0.89 |
+
+Target still met on the held-out set. 6 false detections (no overlapping label, consistent with between-rally ball returns), 3 missed short rallies (2.7–3.4 s). Boundary errors on set 2 are not meaningful: 36 of 40 labels kept the detected edges unchanged, which is why the web app now has an explicit approve step.
+
 ## Ball tracker
 
 Ball visible in 49 % of labelled rally frames, but in only 1.2 % of dead-time frames. The tracker rarely fires outside play, which is why visibility-based rules work despite the low hit rate inside rallies. Losses are mostly the far court, high balls against the ceiling and occlusion by near players.

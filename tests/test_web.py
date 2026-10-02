@@ -48,17 +48,23 @@ def test_labels_start_empty(tmp_path):
     assert client.get(f"/api/matches/{match_id}/labels").json() == []
 
 
-def test_labels_round_trip_sorted(tmp_path):
+def test_labels_round_trip_sorted_with_approval(tmp_path):
     client, match_id = make_client(tmp_path)
-    res = client.put(f"/api/matches/{match_id}/labels", json=[[20.0, 31.5], [1.5, 9.0]])
+    body = [
+        {"start_s": 20.0, "end_s": 31.5, "approved": False},
+        {"start_s": 1.5, "end_s": 9.0, "approved": True},
+    ]
+    res = client.put(f"/api/matches/{match_id}/labels", json=body)
     assert res.status_code == 200
-    assert res.json() == [[1.5, 9.0], [20.0, 31.5]]
-    assert client.get(f"/api/matches/{match_id}/labels").json() == [[1.5, 9.0], [20.0, 31.5]]
+    expected = [body[1], body[0]]
+    assert res.json() == expected
+    assert client.get(f"/api/matches/{match_id}/labels").json() == expected
 
 
 def test_labels_reject_end_before_start(tmp_path):
     client, match_id = make_client(tmp_path)
-    assert client.put(f"/api/matches/{match_id}/labels", json=[[9.0, 1.5]]).status_code == 422
+    body = [{"start_s": 9.0, "end_s": 1.5, "approved": True}]
+    assert client.put(f"/api/matches/{match_id}/labels", json=body).status_code == 422
 
 
 def test_labels_unknown_match_is_404(tmp_path):

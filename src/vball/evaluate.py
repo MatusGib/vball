@@ -1,7 +1,5 @@
-import csv
 import math
 from dataclasses import dataclass
-from pathlib import Path
 
 import numpy as np
 
@@ -81,17 +79,3 @@ def visible_fraction(visible: np.ndarray, intervals: list[Interval], fps: float)
         total += max(0, b - a)
         seen += int(visible[a:b].sum())
     return seen / total if total else 0.0
-
-
-def load_intervals_csv(path: Path) -> list[Interval]:
-    with open(path, newline="") as f:
-        return [(float(row["start_s"]), float(row["end_s"])) for row in csv.DictReader(f)]
-
-
-def save_intervals_csv(path: Path, intervals: list[Interval]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with open(path, "w", newline="") as f:
-        writer = csv.writer(f, lineterminator="\n")
-        writer.writerow(["start_s", "end_s"])
-        for start_s, end_s in sorted(intervals):
-            writer.writerow([round(start_s, 3), round(end_s, 3)])

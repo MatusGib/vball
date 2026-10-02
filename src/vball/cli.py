@@ -5,8 +5,9 @@ from pathlib import Path
 from vball import pipeline, store
 from vball.ball.track import load_tracknet_csv
 from vball.config import default_paths
-from vball.evaluate import load_intervals_csv, rally_metrics, restrict_to_span, visible_fraction
+from vball.evaluate import rally_metrics, restrict_to_span, visible_fraction
 from vball.export import export_rallies
+from vball.labels import load_labels
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -75,7 +76,11 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"no labels at {gt_path}; label rallies in the web app first", file=sys.stderr)
                 return 1
             pred = [(r["start_s"], r["end_s"]) for r in store.get_rallies(conn, args.match_id)]
-            gt = load_intervals_csv(gt_path)
+            labels = load_labels(gt_path)
+            gt = [(label.start_s, label.end_s) for label in labels]
+            unapproved = sum(not label.approved for label in labels)
+            if unapproved:
+                print(f"warning: {unapproved} of {len(labels)} labels not approved yet (copied detections); scores are optimistic")
             print(rally_metrics(restrict_to_span(pred, gt), gt).summary())
             duration_s = match["n_frames"] / match["fps"]
             kept_s = sum(end - start for start, end in pred)

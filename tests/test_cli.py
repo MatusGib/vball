@@ -39,6 +39,14 @@ def test_eval_defaults_to_labels_saved_by_web_app(tmp_path, monkeypatch, capsys)
     assert "precision 1.00 recall 1.00" in capsys.readouterr().out
 
 
+def test_eval_warns_about_unapproved_labels(tmp_path, monkeypatch, capsys):
+    match_id = seed(tmp_path, monkeypatch)
+    main(["redetect", str(match_id)])
+    default_paths().gt_csv(match_id).write_text("start_s,end_s,approved\n10.0,18.0,1\n30.0,36.0,0\n")
+    assert main(["eval", str(match_id)]) == 0
+    assert "1 of 2 labels not approved" in capsys.readouterr().out
+
+
 def test_eval_without_labels_explains(tmp_path, monkeypatch, capsys):
     match_id = seed(tmp_path, monkeypatch)
     assert main(["eval", str(match_id)]) == 1

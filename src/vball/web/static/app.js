@@ -3,7 +3,7 @@ const video = $("#video");
 let matchId = null;
 let rallies = [];
 let current = -1; // index of the detected rally being played, -1 = free playback
-let labels = []; // [[start_s, end_s], ...] sorted by start
+let labels = []; // [{start_s, end_s, approved}], sorted by start_s
 let history = []; // previous label lists, for undo
 let pendingStart = null; // start time of the rally being recorded
 let message = { text: "", kind: "", until: 0 };
@@ -61,7 +61,7 @@ async function migrateBrowserLabels() {
   }
   if (!local.length) return;
   if (!labels.length) {
-    labels = sortLabels(local);
+    labels = sortLabels(local.map(([start_s, end_s]) => ({ start_s, end_s, approved: true })));
     if (!(await queueSave())) return;
     say(`Recovered ${labels.length} labels you made earlier`, "ok");
   }
@@ -105,24 +105,36 @@ function setSaveState(text, kind) {
 // ---------- label editing ----------
 
 function sortLabels(list) {
-  return [...list].sort((a, b) => a[0] - b[0]);
+  return [...list].sort((a, b) => a.start_s - b.start_s);
 }
 
 function say(text, kind) {
-  message = { text, kind, until: Date.now() + 4000 };
+  message = { text, kind, until: Date.now() + 5000 };
   renderLive();
 }
 
-function commit(newLabels, text) {
+function commit(newLabels) {
   history.push(labels);
   labels = sortLabels(newLabels);
   queueSave();
   renderLists();
-  say(text, "ok");
 }
 
-function labelNumber(start) {
-  return labels.findIndex((l) => l[0] === start) + 1;
+function numberOf(label) {
+  return labels.indexOf(label) + 1;
+}
+
+function approvedCount() {
+  return labels.filter((l) => l.approved).length;
+}
+
+// The label being looked at: the one around the playhead (with some slack before the start and after the end).
+function labelAt(t) {
+  let found = -1;
+  labels.forEach((l, i) => {
+    if (t >= l.start_s - 1.5 && t <= l.end_s + 2) found = i;
+  });
+  return found;
 }
 
 function markStart() {
@@ -143,8 +155,9 @@ function markEnd() {
     return;
   }
   pendingStart = null;
-  commit([...labels, [start, end]], "");
-  say(`Saved rally #${labelNumber(start)}: ${fmt(start)} → ${fmt(end)} (${(end - start).toFixed(1)} s)`, "ok");
+  const label = { start_s: start, end_s: end, approved: true };
+  commit([...labels, label]);
+  say(`Saved rally #${numberOf(label)}: ${fmt(start)} → ${fmt(end)} (${(end - start).toFixed(1)} s)`, "ok");
 }
 
 function cancelStart() {
@@ -161,30 +174,61 @@ function undo() {
   labels = history.pop();
   queueSave();
   renderLists();
-  say(`Undone. ${labels.length} labels.`, "ok");
+  say(`Undone. ${labels.length} labels, ${approvedCount()} approved.`, "ok");
+}
+
+function replaceLabel(i, changes) {
+  const updated = { ...labels[i], ...changes };
+  commit(labels.map((l, j) => (j === i ? updated : l)));
+  return updated;
 }
 
 function setEdge(i, edge) {
   const t = video.currentTime;
-  const [start, end] = labels[i];
-  const next = edge === "start" ? [t, end] : [start, t];
-  if (next[1] <= next[0]) {
+  const next = edge === "start" ? { start_s: t } : { end_s: t };
+  const start = next.start_s ?? labels[i].start_s;
+  const end = next.end_s ?? labels[i].end_s;
+  if (end <= start) {
     say(`Can't set the ${edge} there: the end must be after the start.`, "warn");
     return;
   }
-  const updated = labels.map((l, j) => (j === i ? next : l));
-  commit(updated, "");
-  say(`Rally #${labelNumber(next[0])} ${edge} set to ${fmt(t)}`, "ok");
+  const updated = replaceLabel(i, next);
+  say(`Rally #${numberOf(updated)} ${edge} set to ${fmt(t)}`, "ok");
+}
+
+function toggleApproved(i) {
+  const updated = replaceLabel(i, { approved: !labels[i].approved });
+  say(`Rally #${numberOf(updated)} ${updated.approved ? "approved" : "marked to review"} · ${approvedCount()} / ${labels.length} approved`, "ok");
+}
+
+function approveAndNext() {
+  const i = labelAt(video.currentTime);
+  if (i < 0) {
+    say("No label at the playhead. Play one with ▶ (or press S/E to add one), then approve.", "warn");
+    return;
+  }
+  const approved = replaceLabel(i, { approved: true });
+  const n = numberOf(approved);
+  const nextIdx = labels.findIndex((l) => !l.approved && l.start_s > approved.start_s);
+  const anyIdx = nextIdx >= 0 ? nextIdx : labels.findIndex((l) => !l.approved);
+  if (anyIdx < 0) {
+    say(`Approved #${n}. All ${labels.length} labels are approved.`, "ok");
+    return;
+  }
+  const left = labels.length - approvedCount();
+  say(`Approved #${n}. Reviewing #${anyIdx + 1} (${left} left to review)`, "ok");
+  playLabel(anyIdx);
 }
 
 function deleteLabel(i) {
-  const [start, end] = labels[i];
-  commit(labels.filter((_, j) => j !== i), `Deleted rally #${i + 1} (${fmt(start)} → ${fmt(end)})`);
+  const { start_s, end_s } = labels[i];
+  commit(labels.filter((_, j) => j !== i));
+  say(`Deleted rally #${i + 1} (${fmt(start_s)} → ${fmt(end_s)})`, "ok");
 }
 
 function playLabel(i) {
   current = -1;
-  video.currentTime = Math.max(0, labels[i][0] - 1);
+  video.currentTime = Math.max(0, labels[i].start_s - 1);
   video.play();
 }
 
@@ -194,10 +238,9 @@ function importDetected() {
     return;
   }
   if (labels.length && !confirm(`Replace your ${labels.length} labels with the ${rallies.length} detected rallies? (Undo can bring them back.)`)) return;
-  commit(
-    rallies.map((r) => [r.start_s, r.end_s]),
-    `Copied ${rallies.length} detected rallies. Now fix the edges, delete false ones and add missed ones.`,
-  );
+  commit(rallies.map((r) => ({ start_s: r.start_s, end_s: r.end_s, approved: false })));
+  say(`Copied ${rallies.length} detected rallies as "to review". Fix each one if needed, then press A to approve it and jump to the next.`, "ok");
+  playLabel(0);
 }
 
 // ---------- detected rallies playback ----------
@@ -208,6 +251,28 @@ function playRally(i) {
   video.currentTime = rallies[i].start_s;
   video.play();
   renderLists();
+}
+
+// Next / previous are relative to the playhead, not to the last rally clicked.
+function nextRally() {
+  const t = video.currentTime;
+  const i = rallies.findIndex((r) => r.start_s > t + 0.5);
+  if (i < 0) {
+    say(`No detected rallies after ${fmt(t)}`, "warn");
+    return;
+  }
+  playRally(i);
+}
+
+function prevRally() {
+  const t = video.currentTime;
+  // more than 1.5 s into a rally restarts it; otherwise go to the one before
+  const starts = rallies.map((r) => r.start_s);
+  let i = -1;
+  starts.forEach((s, j) => {
+    if (s < t - 1.5) i = j;
+  });
+  playRally(Math.max(0, i));
 }
 
 video.addEventListener("timeupdate", () => {
@@ -221,14 +286,24 @@ video.addEventListener("timeupdate", () => {
     renderLists();
   }
 });
+// a manual seek outside the rally being played ends rally-by-rally playback
+video.addEventListener("seeking", () => {
+  if (current >= 0) {
+    const r = rallies[current];
+    if (video.currentTime < r.start_s - 0.5 || video.currentTime > r.end_s + 0.5) {
+      current = -1;
+      renderLists();
+    }
+  }
+});
 video.addEventListener("loadedmetadata", renderLists);
 video.addEventListener("seeked", renderLive);
 
 // ---------- rendering ----------
 
-function smallButton(text, title, onClick) {
+function smallButton(text, title, onClick, cls = "") {
   const b = document.createElement("button");
-  b.className = "small";
+  b.className = `small ${cls}`;
   b.textContent = text;
   b.title = title;
   b.onclick = (e) => {
@@ -262,21 +337,28 @@ function renderLists() {
 
   const labelsEl = $("#labels");
   labelsEl.innerHTML = "";
-  labels.forEach(([start, end], i) => {
+  labels.forEach((l, i) => {
     const li = document.createElement("li");
+    li.classList.toggle("unapproved", !l.approved);
     const num = document.createElement("span");
     num.className = "num";
     num.textContent = `#${i + 1}`;
     const when = document.createElement("span");
     when.className = "when";
-    when.textContent = `${fmt(start)} → ${fmt(end)}`;
+    when.textContent = `${fmt(l.start_s)} → ${fmt(l.end_s)}`;
     const dur = document.createElement("span");
     dur.className = "dur";
-    dur.textContent = `${(end - start).toFixed(1)} s`;
+    dur.textContent = `${(l.end_s - l.start_s).toFixed(1)} s`;
     li.append(
       num,
       when,
       dur,
+      smallButton(
+        l.approved ? "✓ approved" : "approve",
+        l.approved ? "Approved. Click to mark it as needing review again" : "Mark this label as checked",
+        () => toggleApproved(i),
+        l.approved ? "approved" : "to-review",
+      ),
       smallButton("▶", "Play this rally", () => playLabel(i)),
       smallButton("start = now", "Set the start to the current video time", () => setEdge(i, "start")),
       smallButton("end = now", "Set the end to the current video time", () => setEdge(i, "end")),
@@ -285,6 +367,7 @@ function renderLists() {
     labelsEl.appendChild(li);
   });
   $("#label-count").textContent = labels.length;
+  $("#approved-count").textContent = `${approvedCount()} / ${labels.length} approved`;
 
   const d = video.duration;
   const detected = $("#tl-detected");
@@ -293,7 +376,7 @@ function renderLists() {
   labelled.innerHTML = "";
   if (d > 0) {
     rallies.forEach((r, i) => detected.appendChild(segment(r.start_s, r.end_s, i === current ? "active" : "")));
-    labels.forEach(([s, e]) => labelled.appendChild(segment(s, e, "")));
+    labels.forEach((l) => labelled.appendChild(segment(l.start_s, l.end_s, l.approved ? "" : "unapproved")));
   }
   renderLive();
 }
@@ -309,9 +392,8 @@ function renderLive() {
     }
   }
 
-  document.querySelectorAll("#labels li").forEach((li, i) => {
-    li.classList.toggle("inside", labels[i] && t >= labels[i][0] && t <= labels[i][1]);
-  });
+  const at = labelAt(t);
+  document.querySelectorAll("#labels li").forEach((li, i) => li.classList.toggle("inside", i === at));
 
   const status = $("#status");
   const state = $("#state");
@@ -320,7 +402,9 @@ function renderLive() {
     state.textContent = `● RECORDING rally from ${fmt(pendingStart)} (+${Math.max(0, t - pendingStart).toFixed(1)} s). Press E when the ball is dead.`;
   } else {
     status.className = "status idle";
-    state.textContent = `Not recording · ${labels.length} labelled. Press S at the serve toss.`;
+    const toReview = labels.length - approvedCount();
+    const here = at >= 0 ? ` · at label #${at + 1}${labels[at].approved ? " (approved)" : " (to review: A approves)"}` : "";
+    state.textContent = `Not recording · ${labels.length} labelled, ${toReview} to review${here}`;
   }
   const msg = $("#message");
   const showMsg = message.text && Date.now() < message.until;
@@ -337,12 +421,13 @@ function bind(id, fn) {
     fn();
   };
 }
-bind("#btn-prev", () => playRally(Math.max(0, current - 1)));
-bind("#btn-next", () => playRally(current + 1));
+bind("#btn-prev", prevRally);
+bind("#btn-next", nextRally);
 bind("#btn-start", markStart);
 bind("#btn-end", markEnd);
 bind("#btn-cancel", cancelStart);
 bind("#btn-undo", undo);
+bind("#btn-approve", approveAndNext);
 bind("#btn-import", importDetected);
 
 $("#timeline").onclick = (e) => {
@@ -354,10 +439,11 @@ document.addEventListener("keydown", (e) => {
   if (e.target instanceof HTMLSelectElement || e.target instanceof HTMLInputElement) return;
   if (e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
   const actions = {
-    n: () => playRally(current + 1),
-    p: () => playRally(Math.max(0, current - 1)),
+    n: nextRally,
+    p: prevRally,
     s: markStart,
     e: markEnd,
+    a: approveAndNext,
     u: undo,
     escape: cancelStart,
   };

@@ -39,6 +39,7 @@ video { width: 100%; max-height: calc(100vh - 220px); background: #000; display:
 .tl-detected .tl-seg { background: var(--detected); opacity: 0.55; }
 .tl-detected .tl-seg.active { opacity: 1; }
 .tl-labels .tl-seg { background: var(--label); }
+.tl-labels .tl-seg.unapproved { background: var(--warn); opacity: 0.7; }
 .tl-labels .tl-seg.pending { background: var(--rec); }
 .tl-head { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--fg); pointer-events: none; }
 
@@ -56,6 +57,9 @@ button { font: inherit; padding: 6px 10px; border-radius: 6px; border: 1px solid
 button:hover { border-color: var(--accent); }
 button.primary { border-color: var(--accent); font-weight: 600; }
 button.small { padding: 1px 6px; font-size: 12px; }
+button.approve { border-color: var(--label); color: var(--label); font-weight: 600; }
+button.small.approved { color: var(--label); border-color: transparent; background: transparent; }
+button.small.to-review { color: var(--warn); border-color: var(--warn); font-weight: 600; }
 kbd { font: 11px ui-monospace, monospace; padding: 0 4px; border: 1px solid var(--line); border-radius: 3px; color: var(--muted); }
 
 aside { overflow-y: auto; max-height: calc(100vh - 60px); }
@@ -74,7 +78,10 @@ h2 { font-size: 15px; margin: 12px 0 6px; }
 #rallies li.active { color: var(--accent); font-weight: 600; }
 #labels { padding-left: 0; list-style: none; }
 #labels li { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+#labels li { border-left: 3px solid transparent; }
+#labels li.unapproved { border-left-color: var(--warn); }
 #labels li.inside { background: var(--label-bg); }
+.approved-count { font-size: 12px; font-weight: 400; color: var(--muted); }
 .num { color: var(--muted); min-width: 30px; text-align: right; }
 .when { min-width: 110px; }
 .dur { color: var(--muted); min-width: 44px; }

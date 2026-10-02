@@ -32,22 +32,24 @@
         <span id="message" class="message"></span>
       </div>
       <div class="controls">
-        <button id="btn-prev" title="Previous detected rally (P)">◀ Prev rally <kbd>P</kbd></button>
-        <button id="btn-next" title="Next detected rally (N)">Next rally ▶ <kbd>N</kbd></button>
+        <button id="btn-prev" title="Restart the current detected rally, or go to the one before (P)">◀ Prev rally <kbd>P</kbd></button>
+        <button id="btn-next" title="Next detected rally after the playhead (N)">Next rally ▶ <kbd>N</kbd></button>
         <span class="sep"></span>
         <button id="btn-start" class="primary" title="Mark the serve toss (S)">Mark start <kbd>S</kbd></button>
         <button id="btn-end" class="primary" title="Mark the moment the ball is dead (E)">Mark end <kbd>E</kbd></button>
         <button id="btn-cancel" title="Discard the open start mark (Esc)">Cancel <kbd>Esc</kbd></button>
         <button id="btn-undo" title="Undo the last label change (U)">Undo <kbd>U</kbd></button>
+        <span class="sep"></span>
+        <button id="btn-approve" class="approve" title="Approve the label at the playhead and jump to the next one to review (A)">✓ Approve &amp; next <kbd>A</kbd></button>
       </div>
     </section>
     <aside>
       <section>
         <div class="section-head">
-          <h2>Your labels <span id="label-count" class="badge">0</span></h2>
+          <h2>Your labels <span id="label-count" class="badge">0</span> <span id="approved-count" class="approved-count"></span></h2>
           <span id="save-state" class="save-state"></span>
         </div>
-        <p class="help">Label each rally from serve toss to ball dead. Use <em>start = now</em> / <em>end = now</em> to fix a label at the current video time.</p>
+        <p class="help">Label each rally from serve toss to ball dead. Use <em>start = now</em> / <em>end = now</em> to fix a label at the current video time. Amber labels still need checking: <kbd>A</kbd> approves the one playing and jumps to the next.</p>
         <button id="btn-import" title="Copy the detected rallies into your labels so you only correct them">Start from detected rallies</button>
         <ol id="labels" class="list"></ol>
       </section>

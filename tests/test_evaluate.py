@@ -4,11 +4,9 @@ import numpy as np
 
 from vball.evaluate import (
     interval_iou,
-    load_intervals_csv,
     match_intervals,
     rally_metrics,
     restrict_to_span,
-    save_intervals_csv,
     visible_fraction,
 )
 
@@ -60,15 +58,3 @@ def test_restrict_to_span_keeps_only_labelled_region():
 def test_visible_fraction_inside_intervals():
     visible = np.array([True, False, True, True, False, False])
     assert visible_fraction(visible, [(0.0, 2.0)], fps=1.0) == 0.5
-
-
-def test_load_intervals_csv(tmp_path):
-    p = tmp_path / "gt.csv"
-    p.write_text("start_s,end_s\n1.5,9.0\n20,31.25\n")
-    assert load_intervals_csv(p) == [(1.5, 9.0), (20.0, 31.25)]
-
-
-def test_save_intervals_csv_sorts_and_round_trips(tmp_path):
-    p = tmp_path / "sub" / "gt.csv"
-    save_intervals_csv(p, [(20.0, 31.25), (1.5, 9.0)])
-    assert load_intervals_csv(p) == [(1.5, 9.0), (20.0, 31.25)]

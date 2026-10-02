@@ -1,15 +1,23 @@
 import sqlite3
 from collections.abc import Iterator
+from dataclasses import asdict
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
 
 from vball import store
 from vball.config import Paths
-from vball.evaluate import load_intervals_csv, save_intervals_csv
+from vball.labels import Label, load_labels, save_labels
 
 STATIC_DIR = Path(__file__).parent / "static"
+
+
+class LabelBody(BaseModel):
+    start_s: float
+    end_s: float
+    approved: bool = True
 
 
 def create_app(paths: Paths) -> FastAPI:
@@ -26,6 +34,10 @@ def create_app(paths: Paths) -> FastAPI:
         if store.get_match(conn, match_id) is None:
             raise HTTPException(status_code=404, detail="match not found")
 
+    def read_labels(match_id: int) -> list[dict]:
+        path = paths.gt_csv(match_id)
+        return [asdict(label) for label in load_labels(path)] if path.exists() else []
+
     @app.get("/api/matches")
     def list_matches(conn: sqlite3.Connection = Depends(db)) -> list[dict]:
         return store.list_matches(conn)
@@ -36,20 +48,17 @@ def create_app(paths: Paths) -> FastAPI:
         return store.get_rallies(conn, match_id)
 
     @app.get("/api/matches/{match_id}/labels")
-    def get_labels(match_id: int, conn: sqlite3.Connection = Depends(db)) -> list[tuple[float, float]]:
+    def get_labels(match_id: int, conn: sqlite3.Connection = Depends(db)) -> list[dict]:
         require_match(conn, match_id)
-        path = paths.gt_csv(match_id)
-        return load_intervals_csv(path) if path.exists() else []
+        return read_labels(match_id)
 
     @app.put("/api/matches/{match_id}/labels")
-    def put_labels(
-        match_id: int, labels: list[tuple[float, float]], conn: sqlite3.Connection = Depends(db)
-    ) -> list[tuple[float, float]]:
+    def put_labels(match_id: int, labels: list[LabelBody], conn: sqlite3.Connection = Depends(db)) -> list[dict]:
         require_match(conn, match_id)
-        if any(start < 0 or end <= start for start, end in labels):
+        if any(l.start_s < 0 or l.end_s <= l.start_s for l in labels):
             raise HTTPException(status_code=422, detail="each label needs 0 <= start < end")
-        save_intervals_csv(paths.gt_csv(match_id), labels)
-        return load_intervals_csv(paths.gt_csv(match_id))
+        save_labels(paths.gt_csv(match_id), [Label(l.start_s, l.end_s, l.approved) for l in labels])
+        return read_labels(match_id)
 
     paths.matches_dir.mkdir(parents=True, exist_ok=True)
     app.mount("/media", StaticFiles(directory=paths.matches_dir), name="media")
