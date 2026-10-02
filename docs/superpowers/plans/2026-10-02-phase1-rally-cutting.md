@@ -1325,6 +1325,8 @@ cd third_party/TrackNetV3 && uv run python predict.py --video_file ../../data/sm
 ```
 Expected: `data/smoke/pred/excerpt_ball.csv` with one row per frame and `data/smoke/pred/excerpt.mp4` with the ball trajectory drawn. While it runs, check `nvidia-smi` memory stays under 4 GB (lower `--batch_size` to 4 if CUDA out of memory). Open the overlay video and note roughly how often the ball is marked correctly during play — write the observation down for Task 13.
 
+> **Execution note (2026-10-02, Task 8):** measured on the RTX 3050, feeding 1080p frames to TrackNet ran at ~20 fps (Python decode + resize) and batch 8 overflowed 4 GB VRAM. `run_tracknet` was changed to first downscale with ffmpeg to 512x288 (`-g 30` so the median-background seeks are cheap), run TrackNet on that, then rescale X/Y back to work-video pixels (`downscale_command`, `rescale_tracknet_csv`, tests added); default batch size is 4. Measured: ~92 frames/s + ~50 s fixed cost, i.e. ~35 min ball tracking per 90-min match. Also: this ffmpeg 9.0.2 build's NVENC needs NVIDIA driver >= 610 (installed: 596), so `libx264` is the default encoder in `process_match` and the CLI; pass `--encoder h264_nvenc` after a driver update.
+
 - [ ] **Step 11: Commit**
 
 ```bash
