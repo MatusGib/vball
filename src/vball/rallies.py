@@ -38,7 +38,7 @@ def ball_speed(track: BallTrack, fps: float, width: int, height: int) -> np.ndar
     return speed
 
 
-def _runs(mask: np.ndarray) -> list[tuple[int, int]]:
+def runs(mask: np.ndarray) -> list[tuple[int, int]]:
     edges = np.diff(np.concatenate([[0], mask.astype(np.int8), [0]]))
     return list(zip(np.flatnonzero(edges == 1).tolist(), np.flatnonzero(edges == -1).tolist()))
 
@@ -61,8 +61,8 @@ def detect_rallies(
     in_flight = ((speed >= params.min_speed) & (speed <= params.max_speed)).astype(float)
     window = max(1, round(params.window_s * fps))
     activity = np.convolve(in_flight, np.ones(window) / window, mode="same")
-    runs = _merge(_runs(activity >= params.min_active_frac), round(params.max_gap_s * fps))
-    runs = [(s, e) for s, e in runs if e - s >= round(params.min_rally_s * fps)]
+    active = _merge(runs(activity >= params.min_active_frac), round(params.max_gap_s * fps))
+    active = [(s, e) for s, e in active if e - s >= round(params.min_rally_s * fps)]
     pre, post = round(params.pre_pad_s * fps), round(params.post_pad_s * fps)
-    padded = [(max(0, s - pre), min(n, e + post)) for s, e in runs]
+    padded = [(max(0, s - pre), min(n, e + post)) for s, e in active]
     return [Rally(s, e) for s, e in _merge(padded, 0)]
