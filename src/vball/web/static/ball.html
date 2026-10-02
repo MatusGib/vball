@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>vball · Ball check</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <header>
+    <h1><a href="/">vball</a> · Ball check</h1>
+    <select id="match" aria-label="Match"></select>
+    <span id="progress" class="badge"></span>
+  </header>
+  <main class="ballcheck">
+    <section>
+      <div class="frame-wrap">
+        <img id="frame" alt="Video frame to label" hidden>
+        <div id="marker" class="marker" hidden></div>
+      </div>
+      <div id="status" class="status idle" role="status" aria-live="polite">
+        <span id="state" class="state"></span>
+        <span id="message" class="message"></span>
+      </div>
+      <div class="controls">
+        <button id="btn-prev">◀ Previous <kbd>←</kbd></button>
+        <button id="btn-next">Next ▶ <kbd>→</kbd></button>
+        <span class="sep"></span>
+        <button id="btn-none" class="primary">No ball visible <kbd>X</kbd></button>
+        <button id="btn-skip">Can't tell <kbd>K</kbd></button>
+        <span class="sep"></span>
+        <button id="btn-peek-back">Peek −2 frames <kbd>Q</kbd></button>
+        <button id="btn-peek-fwd">Peek +2 frames <kbd>W</kbd></button>
+      </div>
+      <p class="help">Click the centre of the ball. Peeking shows nearby frames to help find a blurred ball; clicks always label the target frame, so return to it (press Q/W back to 0) first. The tracker's own guess is never shown, so the test stays honest.</p>
+    </section>
+  </main>
+  <script src="/ball.js"></script>
+</body>
+</html>

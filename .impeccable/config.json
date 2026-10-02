@@ -1,0 +1,17 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "broken-image",
+        "value": "*",
+        "files": [
+          "src/vball/web/static/ball.html"
+        ],
+        "createdAt": "2026-10-02T23:26:13.857Z",
+        "reason": "Claude: img src is set at runtime per labelled frame (ball.js); element stays hidden until a frame loads, so no broken box renders"
+      }
+    ]
+  }
+}

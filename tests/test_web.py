@@ -112,3 +112,10 @@ def test_frame_jpeg(tmp_path):
     image = cv2.imdecode(np.frombuffer(res.content, np.uint8), cv2.IMREAD_COLOR)
     assert image.shape == (240, 320, 3)
     assert client.get(f"/api/matches/{match_id}/frames/100000.jpg").status_code == 404
+
+
+def test_ball_check_page_is_served_and_linked(tmp_path):
+    client, _ = make_client(tmp_path)
+    assert "<title>vball · Ball check</title>" in client.get("/ball.html").text
+    assert client.get("/ball.js").status_code == 200
+    assert 'href="/ball.html"' in client.get("/").text
