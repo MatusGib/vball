@@ -328,9 +328,9 @@ def test_probe_reads_synthetic_video(tmp_path):
 
 @requires_ffmpeg
 def test_ingest_converts_fps_and_downscales(tmp_path):
-    src = make_test_video(tmp_path / "v.mp4", seconds=2, fps=25)
+    src = make_test_video(tmp_path / "v.mp4", seconds=1, fps=120)
     info = ingest(src, tmp_path / "work" / "work.mp4", max_height=120, encoder="libx264")
-    assert (info.width, info.height, info.fps) == (160, 120, 30.0)
+    assert (info.width, info.height, info.fps) == (160, 120, 60.0)
     assert abs(info.n_frames - 60) <= 1
 ```
 
