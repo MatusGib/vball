@@ -11,6 +11,8 @@ from vball.config import TRACKNET_THRESHOLD, TRACKNET_WEIGHTS, default_paths
 from vball.evaluate import rally_metrics, restrict_to_span, visible_fraction
 from vball.export import export_rallies
 from vball.labels import load_labels
+from vball.rallies import RallyParams
+from vball.tuning import GRID, TuneCase, grid_search
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -52,6 +54,10 @@ def build_parser() -> argparse.ArgumentParser:
     f.add_argument("--batch-size", type=int, default=2)
     f.add_argument("--rebuild-cache", action="store_true", help="needed whenever --matches changes")
 
+    g = sub.add_parser("tunerallies", help="grid-search rally parameters against hand-labelled matches")
+    g.add_argument("match_ids", type=int, nargs="+")
+    g.add_argument("--top", type=int, default=8)
+
     s = sub.add_parser("serve", help="start the web app")
     s.add_argument("--port", type=int, default=8000)
     return parser
@@ -89,6 +95,23 @@ def main(argv: list[str] | None = None) -> int:
             build_cache(sources, cache, n_windows=args.windows)
         ft.finetune(cache, args.init, args.out, epochs=args.epochs, batch_size=args.batch_size)
         print(f"wrote {args.out}")
+        return 0
+
+    if args.command == "tunerallies":
+        conn = store.connect(paths.db_path)
+        try:
+            cases = []
+            for match_id in args.match_ids:
+                m = store.get_match(conn, match_id)
+                track = load_tracknet_csv(paths.ball_csv(match_id), m["n_frames"])
+                gt = [(label.start_s, label.end_s) for label in load_labels(paths.gt_csv(match_id))]
+                cases.append(TuneCase(track, m["fps"], m["width"], m["height"], gt))
+        finally:
+            conn.close()
+        current = grid_search(cases, grid={k: [v] for k, v in vars(RallyParams()).items() if k in GRID})[0]
+        print(f"current defaults: mean F1 {current.mean_f1:.3f} per match {[round(f, 3) for f in current.f1s]}")
+        for r in grid_search(cases)[: args.top]:
+            print(f"mean F1 {r.mean_f1:.3f} per match {[round(f, 3) for f in r.f1s]} {r.params}")
         return 0
 
     conn = store.connect(paths.db_path)

@@ -106,3 +106,12 @@ def test_balleval_without_test_frames_explains(tmp_path, monkeypatch, capsys):
     match_id = seed(tmp_path, monkeypatch)
     assert main(["balleval", str(match_id)]) == 1
     assert "Ball check" in capsys.readouterr().err
+
+
+def test_tunerallies_prints_current_and_best(tmp_path, monkeypatch, capsys):
+    match_id = seed(tmp_path, monkeypatch)
+    default_paths().gt_csv(match_id).write_text("start_s,end_s\n10.0,18.0\n30.0,36.0\n")
+    assert main(["tunerallies", str(match_id), "--top", "2"]) == 0
+    lines = capsys.readouterr().out.strip().splitlines()
+    assert lines[0].startswith("current defaults: mean F1 1.000")
+    assert len(lines) == 3 and all(line.startswith("mean F1") for line in lines[1:])
