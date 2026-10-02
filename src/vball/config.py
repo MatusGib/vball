@@ -6,6 +6,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 MODELS_DIR = REPO_ROOT / "models"
 TRACKNET_DIR = REPO_ROOT / "third_party" / "TrackNetV3"
 TRACKNET_WEIGHTS = MODELS_DIR / "tracknet_volleyball.pt"
+TRACKNET_THRESHOLD = 0.5  # heatmap value above which TrackNet reports a ball
 
 
 @dataclass(frozen=True)
@@ -32,6 +33,18 @@ class Paths:
     def gt_csv(self, match_id: int) -> Path:
         """Hand-labelled rally intervals saved by the web app."""
         return self.match_dir(match_id) / "gt_rallies.csv"
+
+    def track_video(self, match_id: int) -> Path:
+        """512x288 copy of the work video that TrackNet reads (kept for re-tracking and training)."""
+        return self.match_dir(match_id) / "track.mp4"
+
+    def ball_test_csv(self, match_id: int) -> Path:
+        """Hand-clicked ball positions used to score the ball tracker."""
+        return self.match_dir(match_id) / "ball_test.csv"
+
+    @property
+    def ball_train_dir(self) -> Path:
+        return self.data_dir / "ball_train"
 
 
 def default_paths() -> Paths:

@@ -33,3 +33,16 @@ def test_rescale_csv_maps_visible_points_to_work_resolution(tmp_path):
     dst = tmp_path / "ball.csv"
     rescale_tracknet_csv(src, dst, sx=3.75, sy=3.75)
     assert dst.read_text().splitlines() == ["Frame,Visibility,X,Y", "0,1,960,540", "1,0,0,0"]
+
+
+def test_command_passes_threshold(tmp_path):
+    cmd = tracknet_command(tmp_path / "t.mp4", tmp_path / "out", tmp_path / "w.pt", threshold=0.3, python="py")
+    assert cmd[cmd.index("--threshold") + 1] == "0.3"
+
+
+def test_vendored_predict_has_threshold_patch():
+    from vball.config import TRACKNET_DIR
+
+    source = (TRACKNET_DIR / "predict.py").read_text()
+    assert "--threshold" in source
+    assert "y_pred > HEATMAP_THRESHOLD" in source

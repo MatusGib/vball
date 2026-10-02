@@ -27,6 +27,9 @@ else:
 
 print(f"Using PyTorch device: {device}")
 
+# vball patch 3: configurable heatmap threshold (upstream hard-codes 0.5)
+HEATMAP_THRESHOLD = 0.5
+
 
 def predict(indices, y_pred=None, c_pred=None, img_scaler=(1, 1)):
     """ Predict coordinates from heatmap or inpainted coordinates. 
@@ -49,7 +52,7 @@ def predict(indices, y_pred=None, c_pred=None, img_scaler=(1, 1)):
     
     # Transform input for heatmap prediction
     if y_pred is not None:
-        y_pred = y_pred > 0.5
+        y_pred = y_pred > HEATMAP_THRESHOLD
         y_pred = y_pred.detach().cpu().numpy() if torch.is_tensor(y_pred) else y_pred
         y_pred = to_img_format(y_pred) # (N, L, H, W)
     
@@ -98,7 +101,9 @@ if __name__ == '__main__':
     parser.add_argument('--large_video', action='store_true', default=False, help='whether to process large video')
     parser.add_argument('--output_video', action='store_true', default=False, help='whether to output video with predicted trajectory')
     parser.add_argument('--traj_len', type=int, default=8, help='length of trajectory to draw on video')
+    parser.add_argument('--threshold', type=float, default=0.5, help='heatmap threshold for a ball detection (vball patch 3)')
     args = parser.parse_args()
+    HEATMAP_THRESHOLD = args.threshold
 
     num_workers = args.batch_size if args.batch_size <= 16 else 16
     video_file = args.video_file

@@ -4,7 +4,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from vball.config import TRACKNET_DIR, TRACKNET_WEIGHTS
+from vball.config import TRACKNET_DIR, TRACKNET_THRESHOLD, TRACKNET_WEIGHTS
 from vball.video import probe
 
 # TrackNetV3 input size. Feeding a pre-scaled video avoids slow per-frame 1080p decode + resize in Python.
@@ -12,7 +12,12 @@ TRACKNET_W, TRACKNET_H = 512, 288
 
 
 def tracknet_command(
-    video: Path, out_dir: Path, weights: Path, batch_size: int = 4, python: str = sys.executable
+    video: Path,
+    out_dir: Path,
+    weights: Path,
+    batch_size: int = 4,
+    threshold: float = TRACKNET_THRESHOLD,
+    python: str = sys.executable,
 ) -> list[str]:
     return [
         python, "predict.py",
@@ -22,6 +27,7 @@ def tracknet_command(
         "--eval_mode", "nonoverlap",
         "--large_video",
         "--batch_size", str(batch_size),
+        "--threshold", str(threshold),
     ]
 
 
@@ -52,16 +58,27 @@ def rescale_tracknet_csv(src: Path, dst: Path, sx: float, sy: float) -> Path:
     return dst
 
 
-def run_tracknet(video: Path, out_csv: Path, weights: Path = TRACKNET_WEIGHTS, batch_size: int = 4) -> Path:
-    """Run vendored TrackNetV3 on video; write ball positions in video pixels to out_csv."""
+def run_tracknet(
+    video: Path,
+    out_csv: Path,
+    weights: Path = TRACKNET_WEIGHTS,
+    batch_size: int = 4,
+    threshold: float = TRACKNET_THRESHOLD,
+    small_video: Path | None = None,
+) -> Path:
+    """Run vendored TrackNetV3 on video; write ball positions in video pixels to out_csv.
+
+    The 512x288 copy TrackNet reads is kept at small_video (default: track.mp4 next to out_csv) and reused."""
     if not weights.exists():
         raise FileNotFoundError(f"TrackNet weights not found at {weights}; run scripts/download_models.py")
+    small = small_video or out_csv.parent / "track.mp4"
+    if not small.exists():
+        small.parent.mkdir(parents=True, exist_ok=True)
+        subprocess.run(downscale_command(video, small), check=True)
     tmp_dir = (out_csv.parent / "tracknet_tmp").resolve()
     tmp_dir.mkdir(parents=True, exist_ok=True)
-    small = tmp_dir / "track.mp4"
-    subprocess.run(downscale_command(video, small), check=True)
     subprocess.run(
-        tracknet_command(small, tmp_dir, weights.resolve(), batch_size),
+        tracknet_command(small.resolve(), tmp_dir, weights.resolve(), batch_size, threshold),
         cwd=TRACKNET_DIR,
         check=True,
     )
