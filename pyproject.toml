@@ -15,6 +15,9 @@ dependencies = [
     "huggingface_hub>=0.25",
     "fastapi>=0.115",
     "uvicorn>=0.30",
+    "ultralytics>=8.4.172",
+    "lap>=0.5.13",
+    "torchvision>=0.29.1",
 ]
 
 [project.optional-dependencies]
