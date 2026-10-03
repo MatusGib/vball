@@ -45,3 +45,29 @@ def test_redetect_replaces_rallies_from_cached_track(tmp_path):
 
     assert len(rallies) == 2
     assert len(store.get_rallies(conn, match_id)) == 2
+
+
+@requires_ffmpeg
+def test_redetect_applies_the_serve_check_when_players_and_court_exist(tmp_path):
+    import numpy as np
+
+    from vball.court import LANDMARKS, Calibration, apply_h, save_calibration
+    from vball.pipeline import serve_status
+    from vball.players import save_players
+
+    src = make_test_video(tmp_path / "match.mp4", seconds=20, fps=30)
+    paths = Paths(tmp_path / "data")
+    match_id = process_match(src, paths, encoder="libx264", ball_runner=fake_ball_runner)
+    conn = store.connect(paths.db_path)
+    assert serve_status(paths, match_id) == "serve check skipped: no player tracks"
+    assert len(redetect(conn, paths, match_id)) == 1
+
+    court_to_image = np.array([[20.0, 0.0, 70.0], [0.0, -10.0, 220.0], [0.0, 0.0, 1.0]])
+    names = ["far_left_corner", "far_right_corner", "near_left_corner", "near_right_corner"]
+    image = apply_h(court_to_image, np.array([LANDMARKS[n] for n in names]))
+    points = [{"landmark": n, "x": float(x), "y": float(y)} for n, (x, y) in zip(names, image)]
+    save_calibration(paths.court_json(match_id), Calibration.create(0, points, []))
+    save_players(paths.players_csv(match_id), [(f, 1, 300, 10, 310, 30, 0.9) for f in range(600)])  # never near the ball
+
+    assert serve_status(paths, match_id) == "serve check on"
+    assert redetect(conn, paths, match_id) == []

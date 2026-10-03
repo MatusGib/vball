@@ -155,6 +155,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "redetect":
             rallies = pipeline.redetect(conn, paths, args.match_id)
             print(f"{len(rallies)} rallies")
+            print(pipeline.serve_status(paths, args.match_id))
 
         elif args.command == "track":
             out = args.out or paths.ball_csv(args.match_id)
@@ -168,6 +169,7 @@ def main(argv: list[str] | None = None) -> int:
             print(f"wrote {out}")
             if args.out is None:
                 print(f"{len(pipeline.redetect(conn, paths, args.match_id))} rallies")
+                print(pipeline.serve_status(paths, args.match_id))
 
         elif args.command == "players":
             out = args.out or paths.players_csv(args.match_id)
