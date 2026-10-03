@@ -3,11 +3,13 @@ import sys
 from pathlib import Path
 
 from vball import pipeline, store
+from vball import players as pl_mod
 from vball.ball.metrics import ball_metrics, tolerance_px
 from vball.ball.testset import load_ball_test
 from vball.ball.track import load_tracknet_csv
 from vball.ball.tracknet import run_tracknet
 from vball.config import BASE_TRACKNET_WEIGHTS, TRACKNET_THRESHOLD, TRACKNET_WEIGHTS, default_paths
+from vball.court import load_calibration
 from vball.evaluate import rally_metrics, restrict_to_span, visible_fraction
 from vball.export import export_rallies
 from vball.labels import load_labels
@@ -62,6 +64,18 @@ def build_parser() -> argparse.ArgumentParser:
     g = sub.add_parser("tunerallies", help="grid-search rally parameters against hand-labelled matches")
     g.add_argument("match_ids", type=int, nargs="+")
     g.add_argument("--top", type=int, default=8)
+
+    pl = sub.add_parser("players", help="detect and track players")
+    pl.add_argument("match_id", type=int)
+    pl.add_argument("--backend", choices=["yolo", "ravel"], default="yolo")
+    pl.add_argument("--out", type=Path)
+    pl.add_argument(
+        "--ravel-repo", type=Path, default=Path("data/external/asigatchov-fast-volleyball-tracking-inference")
+    )
+
+    pe = sub.add_parser("playereval", help="label-free player tracking quality on rally frames")
+    pe.add_argument("match_id", type=int)
+    pe.add_argument("--players", type=Path)
 
     s = sub.add_parser("serve", help="start the web app")
     s.add_argument("--port", type=int, default=8000)
@@ -154,6 +168,28 @@ def main(argv: list[str] | None = None) -> int:
             print(f"wrote {out}")
             if args.out is None:
                 print(f"{len(pipeline.redetect(conn, paths, args.match_id))} rallies")
+
+        elif args.command == "players":
+            out = args.out or paths.players_csv(args.match_id)
+            if args.backend == "yolo":
+                pl_mod.run_yolo(paths.work_video(args.match_id), out)
+            else:
+                pl_mod.run_ravel(paths.work_video(args.match_id), out, args.ravel_repo)
+            print(f"wrote {out}")
+
+        elif args.command == "playereval":
+            if not paths.court_json(args.match_id).exists():
+                print("calibrate the court first (viewer: Calibrate court)", file=sys.stderr)
+                return 1
+            cal = load_calibration(paths.court_json(args.match_id))
+            players = pl_mod.load_players(args.players or paths.players_csv(args.match_id))
+            fps = match["fps"]
+            gt_path = paths.gt_csv(args.match_id)
+            if gt_path.exists():
+                rallies = [(round(l.start_s * fps), round(l.end_s * fps)) for l in load_labels(gt_path)]
+            else:
+                rallies = [(r["start_frame"], r["end_frame"]) for r in store.get_rallies(conn, args.match_id)]
+            print(pl_mod.player_stats(players, cal, rallies).summary())
 
         elif args.command == "balleval":
             test_path = paths.ball_test_csv(args.match_id)

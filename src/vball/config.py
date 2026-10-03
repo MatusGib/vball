@@ -45,6 +45,10 @@ class Paths:
         """Hand-clicked ball positions used to score the ball tracker."""
         return self.match_dir(match_id) / "ball_test.csv"
 
+    def players_csv(self, match_id: int) -> Path:
+        """Player boxes with track ids (frame, track_id, x1, y1, x2, y2, score)."""
+        return self.match_dir(match_id) / "players.csv"
+
     def court_json(self, match_id: int) -> Path:
         """Court calibration (homography + camera segments)."""
         return self.match_dir(match_id) / "court.json"

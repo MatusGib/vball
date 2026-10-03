@@ -151,3 +151,20 @@ def test_finetune_adds_vballnet_sources(tmp_path, monkeypatch):
             "--rebuild-cache", "--windows", "3000"]
     assert main(argv) == 0
     assert captured == {"sources": ["OWN", "EXT1", "EXT2"], "n": 3000}
+
+
+def test_players_command_dispatches_backend(tmp_path, monkeypatch, capsys):
+    match_id = seed(tmp_path, monkeypatch)
+    calls = []
+    monkeypatch.setattr("vball.players.run_yolo", lambda video, out_csv: calls.append(("yolo", out_csv)))
+    assert main(["players", str(match_id), "--backend", "yolo"]) == 0
+    assert calls == [("yolo", default_paths().players_csv(match_id))]
+
+
+def test_playereval_needs_calibration(tmp_path, monkeypatch, capsys):
+    match_id = seed(tmp_path, monkeypatch)
+    from vball.players import save_players
+
+    save_players(default_paths().players_csv(match_id), [(0, 1, 0, 0, 10, 10, 0.9)])
+    assert main(["playereval", str(match_id)]) == 1
+    assert "calibrate the court" in capsys.readouterr().err
