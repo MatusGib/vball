@@ -5,9 +5,9 @@ import torch
 from vball.ball.finetune import finetune, load_tracknet, masked_wbce
 from vball.ball.pseudo import IGNORED, POSITIVE
 from vball.ball.train_data import H, SEQ_LEN, W
-from vball.config import TRACKNET_WEIGHTS
+from vball.config import BASE_TRACKNET_WEIGHTS
 
-requires_weights = pytest.mark.skipif(not TRACKNET_WEIGHTS.exists(), reason="TrackNet weights not downloaded")
+requires_weights = pytest.mark.skipif(not BASE_TRACKNET_WEIGHTS.exists(), reason="TrackNet weights not downloaded")
 
 
 def test_masked_wbce_ignores_masked_frames():
@@ -46,7 +46,7 @@ def test_finetune_runs_and_saves_upstream_format(tmp_path):
     write_tiny_cache(tmp_path / "cache")
     out = tmp_path / "tuned.pt"
     losses = finetune(
-        tmp_path / "cache", TRACKNET_WEIGHTS, out, epochs=2, batch_size=1, accum=1, device="cpu", log=lambda s: None
+        tmp_path / "cache", BASE_TRACKNET_WEIGHTS, out, epochs=2, batch_size=1, accum=1, device="cpu", log=lambda s: None
     )
     assert len(losses) == 2 and all(np.isfinite(losses))
     ckpt = torch.load(out, map_location="cpu", weights_only=False)

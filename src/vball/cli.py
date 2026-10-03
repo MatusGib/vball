@@ -7,7 +7,7 @@ from vball.ball.metrics import ball_metrics, tolerance_px
 from vball.ball.testset import load_ball_test
 from vball.ball.track import load_tracknet_csv
 from vball.ball.tracknet import run_tracknet
-from vball.config import TRACKNET_THRESHOLD, TRACKNET_WEIGHTS, default_paths
+from vball.config import BASE_TRACKNET_WEIGHTS, TRACKNET_THRESHOLD, TRACKNET_WEIGHTS, default_paths
 from vball.evaluate import rally_metrics, restrict_to_span, visible_fraction
 from vball.export import export_rallies
 from vball.labels import load_labels
@@ -48,7 +48,7 @@ def build_parser() -> argparse.ArgumentParser:
     f = sub.add_parser("finetune", help="fine-tune TrackNet on pseudo-labels from processed matches")
     f.add_argument("--matches", type=int, nargs="+", required=True, help="training match ids (never the held-out ones)")
     f.add_argument("--out", type=Path, required=True)
-    f.add_argument("--init", type=Path, default=TRACKNET_WEIGHTS)
+    f.add_argument("--init", type=Path, default=BASE_TRACKNET_WEIGHTS)
     f.add_argument("--windows", type=int, default=2000)
     f.add_argument("--epochs", type=int, default=4)
     f.add_argument("--batch-size", type=int, default=2)

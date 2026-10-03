@@ -1,6 +1,34 @@
 # Phase 2a results: ball tracker
 
-Status: fine-tune done; **precision/recall on clicked test frames pending** (Ball check labels for Kent set 2 and Brunel away set 3 not yet made).
+Status: done. Fine-tuned model adopted as the default (decision below).
+
+## Clicked test frames (the honest test)
+
+100 frames per set sampled uniformly from labelled/detected rally time, clicked without seeing any prediction: Kent set 2 (89 ball, 11 no ball), Brunel away set 3 (87 / 13), Kent set 1 (86 / 14; a training set, so not held out).
+
+Tolerance 15 px at 1080p (TrackNet's 4 px at 512 width):
+
+| Set | Configuration | TP | FP | FN | TN | Precision | Recall |
+|---|---|---|---|---|---|---|---|
+| Kent 2 (held out) | beach 0.5 (baseline) | 34 | 19 | 36 | 11 | 0.64 | 0.49 |
+| | beach 0.3 | 36 | 35 | 22 | 7 | 0.51 | 0.62 |
+| | **vball_v1 0.5** | 45 | 19 | 25 | 11 | **0.70** | **0.64** |
+| | vball_v1 0.3 | 48 | 24 | 18 | 10 | 0.67 | 0.73 |
+| Brunel away 3 (held out, other gym, 60 fps) | beach 0.5 (baseline) | 26 | 5 | 56 | 13 | 0.84 | 0.32 |
+| | beach 0.3 | 41 | 9 | 40 | 10 | 0.82 | 0.51 |
+| | **vball_v1 0.5** | 47 | 5 | 35 | 13 | **0.90** | **0.57** |
+| | vball_v1 0.3 | 53 | 8 | 27 | 12 | 0.87 | 0.66 |
+| Kent 1 (training set) | beach 0.5 | 31 | 9 | 47 | 13 | 0.78 | 0.40 |
+| | vball_v1 0.5 | 46 | 12 | 29 | 13 | 0.79 | 0.61 |
+
+Spec target (recall +15 points, precision no worse than −3) is **met by vball_v1 at both thresholds on both held-out sets**. Lowering the threshold on the beach weights instead raises recall but costs precision.
+
+Most "FP" on ball frames are near misses, not other objects: for vball_v1 0.5 on Kent 2, of 64 detections on ball frames 45 are within 15 px, 9 within 15–30 px, 8 within 30–60 px, 2 further. Near the camera the ball is 30–60 px wide, so 15 px is strict. At 30 px tolerance:
+
+| Set | beach 0.5 | beach 0.3 | vball_v1 0.5 | vball_v1 0.3 |
+|---|---|---|---|---|
+| Kent 2 P / R | 0.87 / 0.56 | 0.80 / 0.72 | 0.84 / 0.68 | 0.83 / 0.77 |
+| Brunel away 3 P / R | 0.94 / 0.34 | 0.90 / 0.53 | 0.94 / 0.58 | 0.93 / 0.68 |
 
 ## Data
 
@@ -47,7 +75,26 @@ A lower threshold also raises in-rally detections (beach 0.3 beats v1 0.5 on Ken
 
 With one parameter change, rally detection on v1 tracks matches the baseline (held-out Kent 2: 0.902 vs 0.892). Kent 1 was a training set for v1, so its 0.938 is optimistic.
 
-## Pending
+Rally detection re-tuned for vball_v1 at threshold 0.3 (Kent 1 + 2): current params 0.800 → re-tuned **0.909** (Kent 1 0.916, held-out Kent 2 0.902) with `min_active_frac` 0.3, `max_gap_s` 2.0, `min_rally_s` 1.5 (other params unchanged). Neighbouring settings score 0.906, so this is a plateau, not a knife edge.
 
-- Clicked-frame precision/recall for all four configurations (needs the Ball check labels).
-- Decision: adopt v1 (+ `min_active_frac` 0.3) or a threshold change as defaults.
+## Decision
+
+Adopted **vball_v1 at threshold 0.3** with the re-tuned rally params:
+
+| Criterion (spec) | Target | Result (held-out Kent 2 / Brunel away 3) |
+|---|---|---|
+| Ball recall | +15 points | 0.49 → 0.73 (+24) / 0.32 → 0.66 (+34) |
+| Ball precision | ≥ baseline − 3 | 0.64 → 0.67 / 0.84 → 0.87 |
+| Rally F1 (Kent 1 + 2 mean) | ≥ 0.915 − 0.02 | 0.909 (held-out Kent 2: 0.902 vs 0.892 before) |
+
+vball_v1 at 0.5 had slightly better rally F1 (0.920) but lower ball recall; recall matters more for the next phase (touch detection), and rally F1 at 0.3 is within target.
+
+Defaults changed: `TRACKNET_WEIGHTS = models/tracknet_vball_v1.pt`, `TRACKNET_THRESHOLD = 0.3`; the downloaded beach model is now `BASE_TRACKNET_WEIGHTS` (download script and `vball finetune --init` default). All 11 matches re-tracked; previous tracks kept as `data/exp/m<id>_base_t05_backup.csv`.
+
+Checked with the real commands after re-tracking: `vball eval` rally F1 Kent 1 0.92, Kent 2 0.90; `vball balleval` matches the table above.
+
+## Next levers (not done)
+
+- Ball recall is still 0.66–0.73: a second self-training round on vball_v1's own tracks, or assisted correction of the frames the tracker misses.
+- Between-rally ball returns and false rallies: court-region mask (phase 2b court calibration).
+- Kent 2 rally labels were mostly copied from detections without edge edits, so its boundary errors are not meaningful.
