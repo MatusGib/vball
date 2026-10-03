@@ -134,3 +134,9 @@ def test_ball_track_endpoint(tmp_path):
 def test_ball_track_missing_is_404(tmp_path):
     client, match_id = make_client(tmp_path)
     assert client.get(f"/api/matches/{match_id}/ball").status_code == 404
+
+
+def test_viewer_has_overlay_and_ball_toggle(tmp_path):
+    client, _ = make_client(tmp_path)
+    page = client.get("/").text
+    assert 'id="overlay"' in page and 'id="show-ball"' in page

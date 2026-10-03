@@ -45,6 +45,7 @@ async function selectMatch(id) {
   pendingStart = null;
   current = -1;
   video.src = `/media/${id}/work.mp4`;
+  loadBall(id);
   await migrateBrowserLabels();
   renderLists();
   renderLive();
@@ -412,6 +413,86 @@ function renderLive() {
   msg.className = `message ${showMsg ? message.kind : ""}`;
 }
 setInterval(renderLive, 250); // keeps the status fresh while paused and lets messages expire
+
+// ---------- overlay ----------
+
+const overlay = $("#overlay");
+let ballData = null; // {fps, width, height, x: [...], y: [...]} in work-video pixels, null = not detected
+
+async function loadBall(id) {
+  ballData = null;
+  try {
+    ballData = await getJson(`/api/matches/${id}/ball`);
+  } catch {
+    ballData = null; // no ball track for this match yet
+  }
+  drawOverlay();
+}
+
+// Where the picture sits inside the <video> box (object-fit: contain adds letterbox bars).
+function contentRect() {
+  const w = video.clientWidth;
+  const h = video.clientHeight;
+  const vw = video.videoWidth || 16;
+  const vh = video.videoHeight || 9;
+  const scale = Math.min(w / vw, h / vh);
+  return { x: (w - vw * scale) / 2, y: (h - vh * scale) / 2, scale };
+}
+
+function drawOverlay(mediaTime = video.currentTime) {
+  const dpr = window.devicePixelRatio || 1;
+  const w = video.clientWidth;
+  const h = video.clientHeight;
+  overlay.style.width = `${w}px`;
+  overlay.style.height = `${h}px`;
+  overlay.width = Math.round(w * dpr);
+  overlay.height = Math.round(h * dpr);
+  const ctx = overlay.getContext("2d");
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+  if (!$("#show-ball").checked || !ballData) return;
+  const r = contentRect();
+  const s = (r.scale * (video.videoWidth || ballData.width)) / ballData.width;
+  const frame = Math.round(mediaTime * ballData.fps);
+  for (let k = 8; k >= 0; k--) {
+    const f = frame - k;
+    const x = ballData.x[f];
+    const y = ballData.y[f];
+    if (f < 0 || x == null) continue;
+    ctx.beginPath();
+    ctx.arc(r.x + x * s, r.y + y * s, k === 0 ? 9 : 4, 0, 2 * Math.PI);
+    if (k === 0) {
+      ctx.lineWidth = 2.5;
+      ctx.strokeStyle = "#facc15";
+      ctx.stroke();
+    } else {
+      ctx.fillStyle = `rgba(250, 204, 21, ${0.6 * (1 - k / 9)})`;
+      ctx.fill();
+    }
+  }
+}
+
+// Redraw on every presented video frame. Re-armed on play in case a source change dropped the callback.
+let frameCallbackPending = false;
+function scheduleFrameDraw() {
+  if (frameCallbackPending) return;
+  frameCallbackPending = true;
+  video.requestVideoFrameCallback((_now, meta) => {
+    frameCallbackPending = false;
+    drawOverlay(meta.mediaTime);
+    scheduleFrameDraw();
+  });
+}
+if ("requestVideoFrameCallback" in HTMLVideoElement.prototype) {
+  scheduleFrameDraw();
+  video.addEventListener("play", scheduleFrameDraw);
+} else {
+  video.addEventListener("timeupdate", () => drawOverlay());
+}
+video.addEventListener("seeked", () => drawOverlay());
+video.addEventListener("loadedmetadata", () => drawOverlay());
+window.addEventListener("resize", () => drawOverlay());
+$("#show-ball").onchange = () => drawOverlay();
 
 // ---------- input ----------
 

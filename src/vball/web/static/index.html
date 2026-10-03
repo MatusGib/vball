@@ -18,11 +18,15 @@
         <option value="2">2×</option>
       </select>
     </label>
+    <label title="Draw the tracked ball and its last 8 positions on the video"><input type="checkbox" id="show-ball"> Show ball</label>
     <a class="header-link" href="/ball.html" title="Click the ball in sampled frames to score the ball tracker">Ball check →</a>
   </header>
   <main>
     <section class="player">
-      <video id="video" controls preload="metadata"></video>
+      <div class="video-wrap">
+        <video id="video" controls preload="metadata"></video>
+        <canvas id="overlay" class="overlay" aria-hidden="true"></canvas>
+      </div>
       <div id="timeline" class="timeline" title="Click to jump. Blue: detected rallies. Green: your labels. Red: rally being recorded.">
         <div id="tl-detected" class="tl-row tl-detected"></div>
         <div id="tl-labels" class="tl-row tl-labels"></div>
