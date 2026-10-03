@@ -68,3 +68,16 @@ def test_rally_at_video_start_is_clipped_to_zero():
 def test_rally_times():
     assert Rally(30, 300).start_s(30.0) == 1.0
     assert Rally(30, 300).end_s(30.0) == 10.0
+
+
+def test_keep_rejects_runs_before_padding():
+    track = make_track(N, flights=[(10, 18), (30, 38)])
+    seen = []
+
+    def keep(start, end):
+        seen.append(start)
+        return start < 20 * FPS
+
+    rallies = detect_rallies(track, fps=FPS, width=W, height=H, keep=keep)
+    assert len(rallies) == 1 and rallies[0].start_frame < 20 * FPS
+    assert len(seen) == 2 and abs(seen[1] - 30 * FPS) <= 15  # unpadded run start

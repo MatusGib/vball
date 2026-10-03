@@ -1,4 +1,5 @@
 import math
+from collections.abc import Callable
 from dataclasses import dataclass
 
 import numpy as np
@@ -55,7 +56,12 @@ def _merge(intervals: list[tuple[int, int]], max_gap: int) -> list[tuple[int, in
 
 
 def detect_rallies(
-    track: BallTrack, fps: float, width: int, height: int, params: RallyParams = RallyParams()
+    track: BallTrack,
+    fps: float,
+    width: int,
+    height: int,
+    params: RallyParams = RallyParams(),
+    keep: Callable[[int, int], bool] | None = None,  # e.g. the serve check; sees each unpadded run
 ) -> list[Rally]:
     n = len(track)
     speed = ball_speed(track, fps, width, height)
@@ -64,6 +70,8 @@ def detect_rallies(
     activity = np.convolve(in_flight, np.ones(window) / window, mode="same")
     active = _merge(runs(activity >= params.min_active_frac), round(params.max_gap_s * fps))
     active = [(s, e) for s, e in active if e - s >= round(params.min_rally_s * fps)]
+    if keep is not None:
+        active = [(s, e) for s, e in active if keep(s, e)]
     pre, post = round(params.pre_pad_s * fps), round(params.post_pad_s * fps)
     padded = [(max(0, s - pre), min(n, e + post)) for s, e in active]
     return [Rally(s, e) for s, e in _merge(padded, 0)]
