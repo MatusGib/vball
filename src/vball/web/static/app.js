@@ -419,13 +419,26 @@ setInterval(renderLive, 250); // keeps the status fresh while paused and lets me
 const overlay = $("#overlay");
 let ballData = null; // {fps, width, height, x: [...], y: [...]} in work-video pixels, null = not detected
 
+let ballProblem = null; // why there is no ball data, shown when "Show ball" is ticked
+
 async function loadBall(id) {
   ballData = null;
+  ballProblem = null;
   try {
-    ballData = await getJson(`/api/matches/${id}/ball`);
-  } catch {
-    ballData = null; // no ball track for this match yet
+    const res = await fetch(`/api/matches/${id}/ball`);
+    if (res.ok) {
+      ballData = await res.json();
+    } else {
+      const detail = (await res.json().catch(() => ({}))).detail;
+      ballProblem =
+        detail === "no ball track"
+          ? "This match has no ball track yet (run vball track on it)."
+          : `The server can't provide ball data (HTTP ${res.status}). It is probably an older version: restart it with "uv run vball serve".`;
+    }
+  } catch (err) {
+    ballProblem = `Couldn't load ball data: ${err.message}`;
   }
+  if ($("#show-ball").checked && ballProblem) say(ballProblem, "warn");
   drawOverlay();
 }
 
@@ -492,7 +505,10 @@ if ("requestVideoFrameCallback" in HTMLVideoElement.prototype) {
 video.addEventListener("seeked", () => drawOverlay());
 video.addEventListener("loadedmetadata", () => drawOverlay());
 window.addEventListener("resize", () => drawOverlay());
-$("#show-ball").onchange = () => drawOverlay();
+$("#show-ball").onchange = () => {
+  if ($("#show-ball").checked && ballProblem) say(ballProblem, "warn");
+  drawOverlay();
+};
 
 // ---------- input ----------
 
