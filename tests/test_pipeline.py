@@ -48,7 +48,7 @@ def test_redetect_replaces_rallies_from_cached_track(tmp_path):
 
 
 @requires_ffmpeg
-def test_redetect_applies_the_serve_check_when_players_and_court_exist(tmp_path):
+def test_redetect_applies_the_serve_check_on_request(tmp_path):
     import numpy as np
 
     from vball.court import LANDMARKS, Calibration, apply_h, save_calibration
@@ -70,4 +70,5 @@ def test_redetect_applies_the_serve_check_when_players_and_court_exist(tmp_path)
     save_players(paths.players_csv(match_id), [(f, 1, 300, 10, 310, 30, 0.9) for f in range(600)])  # never near the ball
 
     assert serve_status(paths, match_id) == "serve check on"
-    assert redetect(conn, paths, match_id) == []
+    assert len(redetect(conn, paths, match_id)) == 1  # opt-in only
+    assert redetect(conn, paths, match_id, serve=True) == []

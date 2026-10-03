@@ -31,6 +31,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     r = sub.add_parser("redetect", help="re-run rally detection from the cached ball track")
     r.add_argument("match_id", type=int)
+    r.add_argument("--serve", action="store_true", help="experimental: require a serve (needs players + court)")
 
     e = sub.add_parser("export", help="write per-rally clips and a rallies-only video")
     e.add_argument("match_id", type=int)
@@ -65,6 +66,7 @@ def build_parser() -> argparse.ArgumentParser:
     g = sub.add_parser("tunerallies", help="grid-search rally parameters against hand-labelled matches")
     g.add_argument("match_ids", type=int, nargs="+")
     g.add_argument("--top", type=int, default=8)
+    g.add_argument("--serve", action="store_true", help="experimental: tune the serve check (needs players + court)")
 
     pl = sub.add_parser("players", help="detect and track players")
     pl.add_argument("match_id", type=int)
@@ -138,15 +140,16 @@ def main(argv: list[str] | None = None) -> int:
                 track = load_tracknet_csv(paths.ball_csv(match_id), m["n_frames"])
                 gt = [(label.start_s, label.end_s) for label in load_labels(paths.gt_csv(match_id))]
                 serve = None
-                if pipeline.serve_status(paths, match_id) == "serve check on":
+                if args.serve and pipeline.serve_status(paths, match_id) == "serve check on":
                     players = pl_mod.load_players(paths.players_csv(match_id))
                     court_xy, _, _ = pl_mod.with_court(players, load_calibration(paths.court_json(match_id)))
                     serve = (players, court_xy)
                 cases.append(TuneCase(track, m["fps"], m["width"], m["height"], gt, serve))
         finally:
             conn.close()
-        grid = SERVE_GRID if all(c.serve is not None for c in cases) else GRID
-        print("serve check on" if grid is SERVE_GRID else "serve check off (a match lacks player tracks or a court)")
+        grid = SERVE_GRID if args.serve and all(c.serve is not None for c in cases) else GRID
+        if args.serve:
+            print("serve check on" if grid is SERVE_GRID else "serve check off (a match lacks player tracks or a court)")
         defaults = {**vars(RallyParams()), **vars(ServeParams())}
         current = grid_search(cases, grid={k: [defaults[k]] for k in grid})[0]
         print(f"current defaults: mean F1 {current.mean_f1:.3f} per match {[round(f, 3) for f in current.f1s]}")
@@ -162,9 +165,10 @@ def main(argv: list[str] | None = None) -> int:
             return 1
 
         if args.command == "redetect":
-            rallies = pipeline.redetect(conn, paths, args.match_id)
+            rallies = pipeline.redetect(conn, paths, args.match_id, serve=args.serve)
             print(f"{len(rallies)} rallies")
-            print(pipeline.serve_status(paths, args.match_id))
+            if args.serve:
+                print(pipeline.serve_status(paths, args.match_id))
 
         elif args.command == "track":
             out = args.out or paths.ball_csv(args.match_id)
@@ -178,7 +182,6 @@ def main(argv: list[str] | None = None) -> int:
             print(f"wrote {out}")
             if args.out is None:
                 print(f"{len(pipeline.redetect(conn, paths, args.match_id))} rallies")
-                print(pipeline.serve_status(paths, args.match_id))
 
         elif args.command == "players":
             out = args.out or paths.players_csv(args.match_id)

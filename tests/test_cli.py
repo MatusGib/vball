@@ -115,9 +115,8 @@ def test_tunerallies_prints_current_and_best(tmp_path, monkeypatch, capsys):
     default_paths().gt_csv(match_id).write_text("start_s,end_s\n10.0,18.0\n30.0,36.0\n")
     assert main(["tunerallies", str(match_id), "--top", "2"]) == 0
     lines = capsys.readouterr().out.strip().splitlines()
-    assert lines[0].startswith("serve check off")  # no player tracks in this match
-    assert lines[1].startswith("current defaults: mean F1 1.000")
-    assert len(lines) == 4 and all(line.startswith("mean F1") for line in lines[2:])
+    assert lines[0].startswith("current defaults: mean F1 1.000")
+    assert len(lines) == 3 and all(line.startswith("mean F1") for line in lines[1:])
 
 
 def test_process_passes_weights_and_threshold_to_ball_tracker(tmp_path, monkeypatch, capsys):

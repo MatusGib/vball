@@ -58,11 +58,14 @@ def redetect(
     match_id: int,
     params: RallyParams = RallyParams(),
     serve_params: ServeParams = ServeParams(),
+    serve: bool = False,
 ) -> list[Rally]:
-    """Re-run rally detection from the cached ball track (seconds, no GPU); serve check when possible."""
+    """Re-run rally detection from the cached ball track (seconds, no GPU). serve=True adds the experimental
+    serve check when the match has player tracks and a court (it lost real rallies on Kent 2; see
+    docs/results/phase2b-court-players.md)."""
     match = store.get_match(conn, match_id)
     track = load_tracknet_csv(paths.ball_csv(match_id), match["n_frames"])
-    keep = serve_keep(paths, match_id, track, match["fps"], serve_params)
+    keep = serve_keep(paths, match_id, track, match["fps"], serve_params) if serve else None
     if keep is not None:
         params = replace(params, min_rally_s=serve_params.min_serve_rally_s)
     rallies = detect_rallies(track, match["fps"], match["width"], match["height"], params, keep=keep)
