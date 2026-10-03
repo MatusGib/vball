@@ -44,9 +44,8 @@ class ServeParams:
     baseline_margin_m: float = 0.5 # foot y < margin or > 18 - margin counts as behind a baseline
     side_margin_m: float = 1.5     # foot x within [-margin, 9 + margin]
     reach_w: float = 0.75          # box widened by this * box width each side
-    reach_h: float = 1.5           # and by this * box height above the top (toss)
-    leave_s: float = 0.7           # the ball must be away from the server this long after the contact
-    leave_dist_h: float = 2.0      # "away" = farther than this * box height from the box centre
+    reach_h: float = 0.5           # and by this * box height above the top (hand at the hit)
+    leave_s: float = 0.7           # where the ball is this long after the contact decides
 ```
 
 Rule, for the run's search window `[start - before, start + after]`:
@@ -54,14 +53,15 @@ Rule, for the run's search window `[start - before, start + after]`:
 1. **Server candidates**: player rows in the window whose foot point is on court sideways
    (`-side_margin <= x <= 9 + side_margin`) and behind a baseline (`y < baseline_margin` or
    `y > 18 - baseline_margin`).
-2. **Contact**: the first visible ball position in the window that lies inside a candidate's reach box
-   (the candidate's box in the same frame, widened by `reach_w` box widths each side and `reach_h` box heights
-   above the top). Gives the contact frame `c` and the server's track id.
-3. **Leaves**: the last visible ball position in `(c, c + leave_s]` is farther than `leave_dist_h` box
-   heights from the server's box centre (the server's box at that frame if tracked, otherwise their box at
-   `c`).
+2. **Contact**: any visible ball position in the window inside a candidate's reach box (the candidate's box in
+   the same frame, widened by `reach_w` box widths each side and `reach_h` box heights above the top).
+   Gives a contact frame `c` and the server's track id.
+3. **Leaves**: the last visible ball position in `(c, c + leave_s]` is outside the server's reach box and
+   farther from the box centre than the ball was at `c` (the server's box at that frame if still tracked,
+   otherwise their box at `c`). Measured against the reach box, not in box heights: a near-side server's box is
+   300+ px tall, so a fixed multiple of it would fail real near-side serves.
 
-The run is a rally iff a contact exists whose ball then leaves. A return to the server fails step 3 (the ball
+The run is a rally iff some contact is followed by the ball leaving. A return to the server fails step 3 (the ball
 arrives and stays) or step 2 (the thrower is not behind a baseline).
 
 The far half-court is ~60 px tall in the Kent image, so 1 px of foot error is ~0.15 m there; margins are
@@ -74,7 +74,8 @@ generous and step 3 carries most of the weight.
 - `serve.serve_filter(track, players, court_xy, fps, params) -> Callable` builds `keep`.
 - `pipeline.redetect` uses the filter when the match has both `players.csv` and `court.json`, otherwise prints
   `serve check skipped: no player tracks / court calibration` and behaves as before.
-- `vball tunerallies` searches `min_rally_s` together with a small `ServeParams` grid when every given match has
+- `vball tunerallies` searches `min_rally_s` together with a small `ServeParams` grid (`reach_w`, `reach_h`,
+  `baseline_margin_m`) when every given match has
   players and a court; it always prints the current defaults first.
 - Prerequisite: the player backend chosen in part 2 Task 8 is run on the labelled sets and written to
   `players.csv`.
