@@ -11,6 +11,8 @@ from pydantic import BaseModel
 
 from vball import store
 from vball.ball.testset import BallTestItem, load_ball_test, sample_test_frames, save_ball_test
+from vball.camera import camera_segments
+from vball.court import LANDMARKS, Calibration, calibration_json, load_calibration, save_calibration
 from vball.ball.track import load_tracknet_csv
 from vball.config import Paths
 from vball.labels import Label, load_labels, save_labels
@@ -28,6 +30,17 @@ class BallTestBody(BaseModel):
     status: Literal["todo", "ball", "none", "skip"]
     x: float = 0.0
     y: float = 0.0
+
+
+class CourtPoint(BaseModel):
+    landmark: str
+    x: float
+    y: float
+
+
+class CourtBody(BaseModel):
+    ref_frame: int
+    points: list[CourtPoint]
 
 
 def create_app(paths: Paths) -> FastAPI:
@@ -118,6 +131,31 @@ def create_app(paths: Paths) -> FastAPI:
             "x": column(track.x),
             "y": column(track.y),
         }
+
+    @app.get("/api/matches/{match_id}/court")
+    def get_court(match_id: int, conn: sqlite3.Connection = Depends(db)) -> dict:
+        require_match(conn, match_id)
+        path = paths.court_json(match_id)
+        if not path.exists():
+            raise HTTPException(status_code=404, detail="court not calibrated")
+        return calibration_json(load_calibration(path))
+
+    @app.put("/api/matches/{match_id}/court")
+    def put_court(match_id: int, body: CourtBody, conn: sqlite3.Connection = Depends(db)) -> dict:
+        match = require_match(conn, match_id)
+        unknown = [p.landmark for p in body.points if p.landmark not in LANDMARKS]
+        if unknown:
+            raise HTTPException(status_code=422, detail=f"unknown landmarks: {unknown}")
+        # reads the whole 512x288 copy to find camera moves: ~30-60 s on a real set
+        segments = camera_segments(
+            paths.track_video(match_id), body.ref_frame, match["n_frames"], scale=match["width"] / 512
+        )
+        try:
+            cal = Calibration.create(body.ref_frame, [p.model_dump() for p in body.points], segments)
+        except ValueError as err:
+            raise HTTPException(status_code=422, detail=str(err)) from err
+        save_calibration(paths.court_json(match_id), cal)
+        return calibration_json(cal)
 
     @app.get("/api/matches/{match_id}/frames/{frame}.jpg")
     def get_frame(match_id: int, frame: int, conn: sqlite3.Connection = Depends(db)) -> Response:

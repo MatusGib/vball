@@ -5,6 +5,7 @@ from helpers import make_test_video, make_track, requires_ffmpeg, write_tracknet
 
 from vball import store
 from vball.config import Paths
+from vball.court import LANDMARKS, apply_h
 from vball.rallies import Rally
 from vball.video import VideoInfo
 from vball.web.app import create_app
@@ -140,3 +141,33 @@ def test_viewer_has_overlay_and_ball_toggle(tmp_path):
     client, _ = make_client(tmp_path)
     page = client.get("/").text
     assert 'id="overlay"' in page and 'id="show-ball"' in page
+
+
+COURT_TO_IMAGE = np.array([[110.0, -20.0, 465.0], [0.0, -25.0, 1000.0], [0.0, 0.035, 1.0]])
+
+
+def court_points(names):
+    image = apply_h(COURT_TO_IMAGE, np.array([LANDMARKS[n] for n in names]))
+    return [{"landmark": n, "x": float(x), "y": float(y)} for n, (x, y) in zip(names, image)]
+
+
+def test_court_calibration_round_trip(tmp_path):
+    client, match_id = make_client(tmp_path)  # placeholder video -> one identity segment
+    assert client.get(f"/api/matches/{match_id}/court").status_code == 404
+    names = ["far_left_corner", "far_right_corner", "center_left", "center_right", "near_attack_right"]
+    res = client.put(f"/api/matches/{match_id}/court", json={"ref_frame": 5, "points": court_points(names)})
+    assert res.status_code == 200
+    body = res.json()
+    assert body["mean_error_px"] < 0.01 and len(body["segments"]) == 1
+    H = np.array(body["segments"][0]["court_to_image"])
+    assert np.allclose(apply_h(H, [[0.0, 18.0]]), apply_h(COURT_TO_IMAGE, [[0.0, 18.0]]), atol=1e-3)
+    assert client.get(f"/api/matches/{match_id}/court").json()["ref_frame"] == 5
+
+
+def test_court_calibration_rejects_bad_input(tmp_path):
+    client, match_id = make_client(tmp_path)
+    three = court_points(["far_left_corner", "far_right_corner", "center_left"])
+    assert client.put(f"/api/matches/{match_id}/court", json={"ref_frame": 0, "points": three}).status_code == 422
+    bad = court_points(["far_left_corner", "far_right_corner", "center_left", "center_right"])
+    bad[0]["landmark"] = "goal_post"
+    assert client.put(f"/api/matches/{match_id}/court", json={"ref_frame": 0, "points": bad}).status_code == 422
