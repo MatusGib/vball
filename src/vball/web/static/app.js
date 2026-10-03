@@ -526,7 +526,7 @@ $("#show-ball").onchange = () => {
 const LANDMARK_ORDER = [
   "far_left_corner", "far_right_corner", "far_attack_left", "far_attack_right",
   "center_left", "center_right", "near_attack_left", "near_attack_right",
-  "near_left_corner", "near_right_corner",
+  "near_left_corner", "near_right_corner", "net_left_top", "net_right_top",
 ];
 let court = null; // GET /court response
 let calib = null; // {frame, index, points: [{landmark, x, y}]} while calibrating
@@ -545,9 +545,8 @@ function project(H, [x, y]) {
   return [(H[0][0] * x + H[0][1] * y + H[0][2]) / w, (H[1][0] * x + H[1][1] * y + H[1][2]) / w];
 }
 
-function courtMatrixAt(frame) {
-  const seg = court.segments.find((s) => frame >= s.start_frame && frame < s.end_frame) || court.segments.at(-1);
-  return seg.court_to_image;
+function courtSegmentAt(frame) {
+  return court.segments.find((s) => frame >= s.start_frame && frame < s.end_frame) || court.segments.at(-1);
 }
 
 function drawCourt(ctx, frame, r) {
@@ -560,7 +559,8 @@ function drawCourt(ctx, frame, r) {
     }
   }
   if (!$("#show-court").checked || !court) return;
-  const H = courtMatrixAt(frame);
+  const seg = courtSegmentAt(frame);
+  const H = seg.court_to_image;
   ctx.lineWidth = 2;
   ctx.strokeStyle = "rgba(34, 211, 238, 0.9)";
   for (const [a, b] of court.lines) {
@@ -569,6 +569,21 @@ function drawCourt(ctx, frame, r) {
     ctx.beginPath();
     ctx.moveTo(r.x + ax * r.scale, r.y + ay * r.scale);
     ctx.lineTo(r.x + bx * r.scale, r.y + by * r.scale);
+    ctx.stroke();
+  }
+  // net: a post from each centre-line end up to the clicked tape top, and the tape between them
+  const tops = (seg.net_image || []).map((top, i) => top && [project(H, [i * 9, 9]), top]).filter(Boolean);
+  ctx.strokeStyle = "rgba(250, 204, 21, 0.95)";
+  for (const [[fx, fy], [tx, ty]] of tops) {
+    ctx.beginPath();
+    ctx.moveTo(r.x + fx * r.scale, r.y + fy * r.scale);
+    ctx.lineTo(r.x + tx * r.scale, r.y + ty * r.scale);
+    ctx.stroke();
+  }
+  if (tops.length === 2) {
+    ctx.beginPath();
+    ctx.moveTo(r.x + tops[0][1][0] * r.scale, r.y + tops[0][1][1] * r.scale);
+    ctx.lineTo(r.x + tops[1][1][0] * r.scale, r.y + tops[1][1][1] * r.scale);
     ctx.stroke();
   }
 }
@@ -590,13 +605,27 @@ function renderCalib() {
     if (i === calib.index) li.className = "active";
     list.appendChild(li);
   });
-  $("#calib-save").disabled = calib.points.length < 4;
+  $("#calib-save").disabled = calib.points.filter((p) => !p.landmark.startsWith("net_")).length < 4;
   drawOverlay();
+}
+
+function nextMissing(from) {
+  let i = from;
+  while (i < LANDMARK_ORDER.length && calib.points.some((p) => p.landmark === LANDMARK_ORDER[i])) i += 1;
+  return i;
 }
 
 function startCalibration() {
   video.pause();
-  calib = { frame: Math.round(video.currentTime * matchFps), index: 0, points: [] };
+  if (court) {
+    // re-open the saved calibration at its frame so only missing points (e.g. the net) need clicking
+    video.currentTime = court.ref_frame / matchFps;
+    const saved = [...court.points, ...(court.net_points || [])].map(({ landmark, x, y }) => ({ landmark, x, y }));
+    calib = { frame: court.ref_frame, index: 0, points: saved };
+  } else {
+    calib = { frame: Math.round(video.currentTime * matchFps), index: 0, points: [] };
+  }
+  calib.index = nextMissing(0);
   $("#calib-result").textContent = "";
   renderCalib();
 }
@@ -608,13 +637,13 @@ overlay.addEventListener("click", (e) => {
   const x = (e.clientX - rect.left - r.x) / r.scale;
   const y = (e.clientY - rect.top - r.y) / r.scale;
   calib.points.push({ landmark: LANDMARK_ORDER[calib.index], x, y });
-  calib.index += 1;
+  calib.index = nextMissing(calib.index + 1);
   renderCalib();
 });
 
 bind("#btn-calibrate", startCalibration);
 bind("#calib-skip", () => {
-  if (calib && calib.index < LANDMARK_ORDER.length) calib.index += 1;
+  if (calib && calib.index < LANDMARK_ORDER.length) calib.index = nextMissing(calib.index + 1);
   renderCalib();
 });
 bind("#calib-undo", () => {
