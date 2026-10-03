@@ -19,6 +19,7 @@
       </select>
     </label>
     <label title="Draw the tracked ball and its last 8 positions on the video"><input type="checkbox" id="show-ball"> Show ball</label>
+    <label title="Draw the calibrated court lines on the video"><input type="checkbox" id="show-court"> Show court</label>
     <a class="header-link" href="/ball.html" title="Click the ball in sampled frames to score the ball tracker">Ball check →</a>
   </header>
   <main>
@@ -46,9 +47,21 @@
         <button id="btn-undo" title="Undo the last label change (U)">Undo <kbd>U</kbd></button>
         <span class="sep"></span>
         <button id="btn-approve" class="approve" title="Approve the label at the playhead and jump to the next one to review (A)">✓ Approve &amp; next <kbd>A</kbd></button>
+        <span class="sep"></span>
+        <button id="btn-calibrate" title="Pause on a clear frame and click known court points">Calibrate court</button>
       </div>
     </section>
     <aside>
+      <section id="calib-panel" hidden>
+        <h2>Court calibration</h2>
+        <p class="help">Pause on a frame where the court lines are clear. Click each landmark on the video in turn; press <em>Skip</em> for any you can't see. At least 4 are needed. Left/right as seen from the camera; "near" is the camera end.</p>
+        <ol id="calib-list" class="list"></ol>
+        <button id="calib-skip">Skip</button>
+        <button id="calib-undo">Undo</button>
+        <button id="calib-save" class="primary" disabled>Save calibration</button>
+        <button id="calib-cancel">Cancel</button>
+        <p id="calib-result" class="help"></p>
+      </section>
       <section>
         <div class="section-head">
           <h2>Your labels <span id="label-count" class="badge">0</span> <span id="approved-count" class="approved-count"></span></h2>

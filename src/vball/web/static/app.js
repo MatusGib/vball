@@ -1,6 +1,8 @@
 const $ = (sel) => document.querySelector(sel);
 const video = $("#video");
 let matchId = null;
+let matchFps = 30; // frames per second of the selected match
+let matchesById = {};
 let rallies = [];
 let current = -1; // index of the detected rally being played, -1 = free playback
 let labels = []; // [{start_s, end_s, approved}], sorted by start_s
@@ -27,6 +29,7 @@ async function loadMatches() {
   const sel = $("#match");
   sel.innerHTML = "";
   for (const m of matches) {
+    matchesById[m.id] = m;
     const opt = document.createElement("option");
     opt.value = m.id;
     opt.textContent = `#${m.id} ${m.name} (${m.n_rallies} rallies)`;
@@ -38,6 +41,7 @@ async function loadMatches() {
 
 async function selectMatch(id) {
   matchId = id;
+  matchFps = matchesById[id]?.fps || 30;
   $("#match").value = String(id);
   rallies = await getJson(`/api/matches/${id}/rallies`);
   labels = sortLabels(await getJson(`/api/matches/${id}/labels`));
@@ -46,6 +50,9 @@ async function selectMatch(id) {
   current = -1;
   video.src = `/media/${id}/work.mp4`;
   loadBall(id);
+  loadCourt(id);
+  calib = null;
+  renderCalib();
   await migrateBrowserLabels();
   renderLists();
   renderLive();
@@ -463,8 +470,9 @@ function drawOverlay(mediaTime = video.currentTime) {
   const ctx = overlay.getContext("2d");
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, w, h);
-  if (!$("#show-ball").checked || !ballData) return;
   const r = contentRect();
+  drawCourt(ctx, Math.round(mediaTime * matchFps), r);
+  if (!$("#show-ball").checked || !ballData) return;
   const s = (r.scale * (video.videoWidth || ballData.width)) / ballData.width;
   const frame = Math.round(mediaTime * ballData.fps);
   for (let k = 8; k >= 0; k--) {
@@ -509,6 +517,133 @@ $("#show-ball").onchange = () => {
   if ($("#show-ball").checked && ballProblem) say(ballProblem, "warn");
   drawOverlay();
 };
+
+// ---------- court calibration ----------
+
+const LANDMARK_ORDER = [
+  "far_left_corner", "far_right_corner", "far_attack_left", "far_attack_right",
+  "center_left", "center_right", "near_attack_left", "near_attack_right",
+  "near_left_corner", "near_right_corner",
+];
+let court = null; // GET /court response
+let calib = null; // {frame, index, points: [{landmark, x, y}]} while calibrating
+
+async function loadCourt(id) {
+  try {
+    court = await getJson(`/api/matches/${id}/court`);
+  } catch {
+    court = null; // not calibrated yet
+  }
+  drawOverlay();
+}
+
+function project(H, [x, y]) {
+  const w = H[2][0] * x + H[2][1] * y + H[2][2];
+  return [(H[0][0] * x + H[0][1] * y + H[0][2]) / w, (H[1][0] * x + H[1][1] * y + H[1][2]) / w];
+}
+
+function courtMatrixAt(frame) {
+  const seg = court.segments.find((s) => frame >= s.start_frame && frame < s.end_frame) || court.segments.at(-1);
+  return seg.court_to_image;
+}
+
+function drawCourt(ctx, frame, r) {
+  if (calib) {
+    ctx.fillStyle = "#22d3ee";
+    for (const p of calib.points) {
+      ctx.beginPath();
+      ctx.arc(r.x + p.x * r.scale, r.y + p.y * r.scale, 5, 0, 2 * Math.PI);
+      ctx.fill();
+    }
+  }
+  if (!$("#show-court").checked || !court) return;
+  const H = courtMatrixAt(frame);
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = "rgba(34, 211, 238, 0.9)";
+  for (const [a, b] of court.lines) {
+    const [ax, ay] = project(H, a);
+    const [bx, by] = project(H, b);
+    ctx.beginPath();
+    ctx.moveTo(r.x + ax * r.scale, r.y + ay * r.scale);
+    ctx.lineTo(r.x + bx * r.scale, r.y + by * r.scale);
+    ctx.stroke();
+  }
+}
+
+function renderCalib() {
+  $("#calib-panel").hidden = !calib;
+  overlay.style.pointerEvents = calib ? "auto" : "none";
+  overlay.style.cursor = calib ? "crosshair" : "";
+  if (!calib) {
+    drawOverlay();
+    return;
+  }
+  const list = $("#calib-list");
+  list.innerHTML = "";
+  LANDMARK_ORDER.forEach((name, i) => {
+    const li = document.createElement("li");
+    const done = calib.points.find((p) => p.landmark === name);
+    li.textContent = `${name.replaceAll("_", " ")}${done ? " ✓" : ""}`;
+    if (i === calib.index) li.className = "active";
+    list.appendChild(li);
+  });
+  $("#calib-save").disabled = calib.points.length < 4;
+  drawOverlay();
+}
+
+function startCalibration() {
+  video.pause();
+  calib = { frame: Math.round(video.currentTime * matchFps), index: 0, points: [] };
+  $("#calib-result").textContent = "";
+  renderCalib();
+}
+
+overlay.addEventListener("click", (e) => {
+  if (!calib || calib.index >= LANDMARK_ORDER.length) return;
+  const rect = overlay.getBoundingClientRect();
+  const r = contentRect();
+  const x = (e.clientX - rect.left - r.x) / r.scale;
+  const y = (e.clientY - rect.top - r.y) / r.scale;
+  calib.points.push({ landmark: LANDMARK_ORDER[calib.index], x, y });
+  calib.index += 1;
+  renderCalib();
+});
+
+bind("#btn-calibrate", startCalibration);
+bind("#calib-skip", () => {
+  if (calib && calib.index < LANDMARK_ORDER.length) calib.index += 1;
+  renderCalib();
+});
+bind("#calib-undo", () => {
+  if (!calib) return;
+  const last = calib.points.pop();
+  calib.index = last ? LANDMARK_ORDER.indexOf(last.landmark) : 0;
+  renderCalib();
+});
+bind("#calib-cancel", () => {
+  calib = null;
+  renderCalib();
+});
+bind("#calib-save", async () => {
+  $("#calib-result").textContent = "Saving… (checking the whole video for camera moves, about a minute)";
+  try {
+    const res = await fetch(`/api/matches/${matchId}/court`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ref_frame: calib.frame, points: calib.points }),
+    });
+    if (!res.ok) throw new Error((await res.json()).detail || `HTTP ${res.status}`);
+    court = await res.json();
+    calib = null;
+    $("#show-court").checked = true;
+    renderCalib();
+    $("#calib-result").textContent = "";
+    say(`Court saved: mean error ${court.mean_error_px} px, ${court.segments.length} camera segment(s)`, "ok");
+  } catch (err) {
+    $("#calib-result").textContent = `Not saved: ${err.message}`;
+  }
+});
+$("#show-court").onchange = () => drawOverlay();
 
 // ---------- input ----------
 

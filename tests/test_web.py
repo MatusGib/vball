@@ -171,3 +171,10 @@ def test_court_calibration_rejects_bad_input(tmp_path):
     bad = court_points(["far_left_corner", "far_right_corner", "center_left", "center_right"])
     bad[0]["landmark"] = "goal_post"
     assert client.put(f"/api/matches/{match_id}/court", json={"ref_frame": 0, "points": bad}).status_code == 422
+
+
+def test_viewer_has_calibration_controls(tmp_path):
+    client, _ = make_client(tmp_path)
+    page = client.get("/").text
+    for element_id in ("show-court", "btn-calibrate", "calib-panel", "calib-save"):
+        assert f'id="{element_id}"' in page
