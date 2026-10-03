@@ -11,6 +11,7 @@ from pydantic import BaseModel
 
 from vball import store
 from vball.ball.testset import BallTestItem, load_ball_test, sample_test_frames, save_ball_test
+from vball.ball.track import load_tracknet_csv
 from vball.config import Paths
 from vball.labels import Label, load_labels, save_labels
 
@@ -98,6 +99,25 @@ def create_app(paths: Paths) -> FastAPI:
         items[index] = BallTestItem(frame, body.status, body.x, body.y)
         save_ball_test(path, items)
         return asdict(items[index])
+
+    @app.get("/api/matches/{match_id}/ball")
+    def get_ball(match_id: int, conn: sqlite3.Connection = Depends(db)) -> dict:
+        match = require_match(conn, match_id)
+        path = paths.ball_csv(match_id)
+        if not path.exists():
+            raise HTTPException(status_code=404, detail="no ball track")
+        track = load_tracknet_csv(path, match["n_frames"])
+
+        def column(values):
+            return [round(float(v), 1) if seen else None for v, seen in zip(values, track.visible)]
+
+        return {
+            "fps": match["fps"],
+            "width": match["width"],
+            "height": match["height"],
+            "x": column(track.x),
+            "y": column(track.y),
+        }
 
     @app.get("/api/matches/{match_id}/frames/{frame}.jpg")
     def get_frame(match_id: int, frame: int, conn: sqlite3.Connection = Depends(db)) -> Response:

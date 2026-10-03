@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 from fastapi.testclient import TestClient
-from helpers import make_test_video, requires_ffmpeg
+from helpers import make_test_video, make_track, requires_ffmpeg, write_tracknet_csv
 
 from vball import store
 from vball.config import Paths
@@ -119,3 +119,18 @@ def test_ball_check_page_is_served_and_linked(tmp_path):
     assert "<title>vball · Ball check</title>" in client.get("/ball.html").text
     assert client.get("/ball.js").status_code == 200
     assert 'href="/ball.html"' in client.get("/").text
+
+
+def test_ball_track_endpoint(tmp_path):
+    client, match_id = make_client(tmp_path)  # 1280x720 at 30 fps, 900 frames
+    write_tracknet_csv(tmp_path / "data" / "matches" / str(match_id) / "ball.csv", make_track(900, flights=[(1.0, 2.0)]))
+    data = client.get(f"/api/matches/{match_id}/ball").json()
+    assert data["fps"] == 30.0 and (data["width"], data["height"]) == (1280, 720)
+    assert len(data["x"]) == len(data["y"]) == 900
+    assert data["x"][0] is None
+    assert (data["x"][31], data["y"][31]) == (60.0, 360.0)
+
+
+def test_ball_track_missing_is_404(tmp_path):
+    client, match_id = make_client(tmp_path)
+    assert client.get(f"/api/matches/{match_id}/ball").status_code == 404
