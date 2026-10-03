@@ -55,6 +55,9 @@ def build_parser() -> argparse.ArgumentParser:
     f.add_argument("--epochs", type=int, default=4)
     f.add_argument("--batch-size", type=int, default=2)
     f.add_argument("--rebuild-cache", action="store_true", help="needed whenever --matches changes")
+    f.add_argument(
+        "--vballnet", type=Path, help="VballNet dataset root (.../vballnet-dataset/data) to add as labelled sources"
+    )
 
     g = sub.add_parser("tunerallies", help="grid-search rally parameters against hand-labelled matches")
     g.add_argument("match_ids", type=int, nargs="+")
@@ -92,6 +95,7 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.command == "finetune":
+        from vball.ball import external
         from vball.ball import finetune as ft  # torch-heavy; imported only when needed
         from vball.ball.train_data import build_cache
 
@@ -100,6 +104,9 @@ def main(argv: list[str] | None = None) -> int:
             sources = ft.prepare_sources(conn, paths, args.matches)
         finally:
             conn.close()
+        if args.vballnet:
+            sources += external.clip_sources(args.vballnet, paths.data_dir / "external_cache" / "vballnet")
+            print(f"{len(sources)} training sources including VballNet clips")
         cache = paths.ball_train_dir
         if args.rebuild_cache or not (cache / "meta.npz").exists():
             build_cache(sources, cache, n_windows=args.windows)

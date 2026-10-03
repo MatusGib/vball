@@ -135,3 +135,19 @@ def test_process_passes_weights_and_threshold_to_ball_tracker(tmp_path, monkeypa
     assert main(["process", "m.mp4", "--weights", "base.pt", "--threshold", "0.5"]) == 0
     assert seen == {"weights": Path("base.pt"), "threshold": 0.5}
     assert "match 7 processed" in capsys.readouterr().out
+
+
+def test_finetune_adds_vballnet_sources(tmp_path, monkeypatch):
+    monkeypatch.setenv("VBALL_DATA", str(tmp_path / "data"))
+    captured = {}
+    monkeypatch.setattr("vball.ball.finetune.prepare_sources", lambda conn, paths, ids: ["OWN"])
+    monkeypatch.setattr("vball.ball.external.clip_sources", lambda root, cache_dir: ["EXT1", "EXT2"])
+    monkeypatch.setattr(
+        "vball.ball.train_data.build_cache",
+        lambda sources, out_dir, n_windows: captured.update(sources=sources, n=n_windows),
+    )
+    monkeypatch.setattr("vball.ball.finetune.finetune", lambda *args, **kwargs: [0.0])
+    argv = ["finetune", "--matches", "1", "--out", str(tmp_path / "v2.pt"), "--vballnet", str(tmp_path / "vn"),
+            "--rebuild-cache", "--windows", "3000"]
+    assert main(argv) == 0
+    assert captured == {"sources": ["OWN", "EXT1", "EXT2"], "n": 3000}
