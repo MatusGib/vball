@@ -51,6 +51,8 @@ async function selectMatch(id) {
   video.src = `/media/${id}/work.mp4`;
   loadBall(id);
   loadCourt(id);
+  playerChunks = new Map();
+  playersMissing = false;
   calib = null;
   renderCalib();
   await migrateBrowserLabels();
@@ -471,10 +473,11 @@ function drawOverlay(mediaTime = video.currentTime) {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, w, h);
   const r = contentRect();
-  drawCourt(ctx, Math.round(mediaTime * matchFps), r);
+  const frame = Math.round(mediaTime * matchFps);
+  drawCourt(ctx, frame, r);
+  drawPlayers(ctx, frame, r);
   if (!$("#show-ball").checked || !ballData) return;
   const s = (r.scale * (video.videoWidth || ballData.width)) / ballData.width;
-  const frame = Math.round(mediaTime * ballData.fps);
   for (let k = 8; k >= 0; k--) {
     const f = frame - k;
     const x = ballData.x[f];
@@ -644,6 +647,84 @@ bind("#calib-save", async () => {
   }
 });
 $("#show-court").onchange = () => drawOverlay();
+
+// ---------- players ----------
+
+const CHUNK = 300; // frames per players request
+const SIDE_COLORS = ["#60a5fa", "#f87171"]; // near, far
+let playerChunks = new Map(); // chunk start frame -> rows (null while loading)
+let playersMissing = false;
+
+function requestChunk(start) {
+  if (start < 0 || playersMissing || playerChunks.has(start)) return;
+  playerChunks.set(start, null);
+  fetch(`/api/matches/${matchId}/players?start=${start}&end=${start + CHUNK}`)
+    .then(async (res) => {
+      if (!res.ok) {
+        const detail = (await res.json().catch(() => ({}))).detail;
+        playersMissing = true;
+        say(
+          detail === "no player tracks"
+            ? "This match has no player tracks yet (run vball players on it)."
+            : `The server can't provide player data (HTTP ${res.status}); restart it with "uv run vball serve".`,
+          "warn",
+        );
+        playerChunks.set(start, []);
+        return;
+      }
+      playerChunks.set(start, await res.json());
+      drawOverlay();
+    })
+    .catch(() => playerChunks.set(start, []));
+}
+
+function playersAt(frame) {
+  const start = Math.floor(frame / CHUNK) * CHUNK;
+  requestChunk(start);
+  requestChunk(start + CHUNK); // prefetch while playing
+  return (playerChunks.get(start) || []).filter((p) => p.frame === frame);
+}
+
+function drawPlayers(ctx, frame, r) {
+  const mini = $("#minimap");
+  const show = $("#show-players").checked;
+  mini.hidden = !(show && court);
+  if (!show) return;
+  const rows = playersAt(frame);
+  ctx.lineWidth = 2;
+  ctx.font = "12px system-ui";
+  for (const p of rows) {
+    const [x1, y1, x2, y2] = p.box;
+    ctx.strokeStyle = p.side === null ? "rgba(200, 200, 200, 0.5)" : SIDE_COLORS[p.side];
+    ctx.strokeRect(r.x + x1 * r.scale, r.y + y1 * r.scale, (x2 - x1) * r.scale, (y2 - y1) * r.scale);
+    ctx.fillStyle = ctx.strokeStyle;
+    ctx.fillText(String(p.id), r.x + x1 * r.scale, r.y + y1 * r.scale - 3);
+  }
+  if (!court) return;
+  // top-down map: court x -1..10 m across, y -2..20 m along (far side at the top)
+  const m = mini.getContext("2d");
+  const sx = mini.width / 11;
+  const sy = mini.height / 22;
+  const px = (x) => (x + 1) * sx;
+  const py = (y) => (20 - y) * sy;
+  m.clearRect(0, 0, mini.width, mini.height);
+  m.strokeStyle = "#e5e7eb";
+  m.lineWidth = 1;
+  m.strokeRect(px(0), py(18), 9 * sx, 18 * sy);
+  m.beginPath();
+  m.moveTo(px(0), py(9));
+  m.lineTo(px(9), py(9));
+  m.stroke();
+  for (const p of rows) {
+    if (!p.court) continue;
+    m.fillStyle = SIDE_COLORS[p.side];
+    m.beginPath();
+    m.arc(px(p.court[0]), py(p.court[1]), 4, 0, 2 * Math.PI);
+    m.fill();
+  }
+}
+
+$("#show-players").onchange = () => drawOverlay();
 
 // ---------- input ----------
 

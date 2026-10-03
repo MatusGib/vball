@@ -94,3 +94,4 @@ h1 a { color: inherit; text-decoration: none; }
 .video-wrap { position: relative; }
 .overlay { position: absolute; left: 0; top: 0; pointer-events: none; }
 #calib-list li.active { background: var(--row); color: var(--accent); font-weight: 600; }
+.minimap { position: absolute; right: 8px; top: 8px; background: #0b3d2ecc; border-radius: 4px; pointer-events: none; }

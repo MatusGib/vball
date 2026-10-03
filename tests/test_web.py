@@ -178,3 +178,31 @@ def test_viewer_has_calibration_controls(tmp_path):
     page = client.get("/").text
     for element_id in ("show-court", "btn-calibrate", "calib-panel", "calib-save"):
         assert f'id="{element_id}"' in page
+
+
+def test_players_window_with_court_positions(tmp_path):
+    from vball.players import save_players
+
+    client, match_id = make_client(tmp_path)
+    names = ["far_left_corner", "far_right_corner", "center_left", "center_right"]
+    client.put(f"/api/matches/{match_id}/court", json={"ref_frame": 0, "points": court_points(names)})
+    fx, fy = apply_h(COURT_TO_IMAGE, [[4.5, 15.0]])[0]
+    save_players(
+        tmp_path / "data" / "matches" / str(match_id) / "players.csv",
+        [(10, 4, fx - 20, fy - 120, fx + 20, fy, 0.9), (500, 5, 0, 0, 10, 10, 0.9)],
+    )
+    rows = client.get(f"/api/matches/{match_id}/players?start=0&end=100").json()
+    assert len(rows) == 1 and rows[0]["frame"] == 10 and rows[0]["id"] == 4 and rows[0]["side"] == 1
+    # boxes are stored to 0.1 px, so allow 1 cm on court
+    assert abs(rows[0]["court"][0] - 4.5) < 0.01 and abs(rows[0]["court"][1] - 15.0) < 0.01
+
+
+def test_players_window_limits(tmp_path):
+    from vball.players import save_players
+
+    client, match_id = make_client(tmp_path)
+    assert client.get(f"/api/matches/{match_id}/players?start=0&end=10").status_code == 404  # no players.csv
+    save_players(tmp_path / "data" / "matches" / str(match_id) / "players.csv", [(1, 1, 0, 0, 10, 10, 0.9)])
+    assert client.get(f"/api/matches/{match_id}/players?start=0&end=5000").status_code == 422
+    page = client.get("/").text
+    assert 'id="show-players"' in page and 'id="minimap"' in page

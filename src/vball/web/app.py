@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Literal
 
 import cv2
+import numpy as np
 from fastapi import Depends, FastAPI, HTTPException, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -16,6 +17,7 @@ from vball.court import LANDMARKS, Calibration, calibration_json, load_calibrati
 from vball.ball.track import load_tracknet_csv
 from vball.config import Paths
 from vball.labels import Label, load_labels, save_labels
+from vball.players import load_players, with_court
 
 STATIC_DIR = Path(__file__).parent / "static"
 
@@ -156,6 +158,43 @@ def create_app(paths: Paths) -> FastAPI:
             raise HTTPException(status_code=422, detail=str(err)) from err
         save_calibration(paths.court_json(match_id), cal)
         return calibration_json(cal)
+
+    player_cache: dict[int, tuple] = {}  # match id -> (players mtime, court mtime, (players, court mapping))
+
+    def players_for(match_id: int):
+        csv_path, court_path = paths.players_csv(match_id), paths.court_json(match_id)
+        if not csv_path.exists():
+            raise HTTPException(status_code=404, detail="no player tracks")
+        key = (csv_path.stat().st_mtime, court_path.stat().st_mtime if court_path.exists() else 0.0)
+        cached = player_cache.get(match_id)
+        if cached is None or cached[:2] != key:
+            players = load_players(csv_path)
+            court = with_court(players, load_calibration(court_path)) if court_path.exists() else None
+            player_cache[match_id] = (*key, (players, court))
+        return player_cache[match_id][2]
+
+    @app.get("/api/matches/{match_id}/players")
+    def get_players(match_id: int, start: int, end: int, conn: sqlite3.Connection = Depends(db)) -> list[dict]:
+        require_match(conn, match_id)
+        if not 0 <= start < end or end - start > 1800:
+            raise HTTPException(status_code=422, detail="window must be 1-1800 frames")
+        players, court = players_for(match_id)
+        rows = []
+        for i in np.flatnonzero((players.frame >= start) & (players.frame < end)):
+            row = {
+                "frame": int(players.frame[i]),
+                "id": int(players.track_id[i]),
+                "box": [round(float(v), 1) for v in players.box[i]],
+                "court": None,
+                "side": None,
+            }
+            if court is not None:
+                court_xy, side, on_court = court
+                if on_court[i]:
+                    row["court"] = [round(float(v), 3) for v in court_xy[i]]
+                    row["side"] = int(side[i])
+            rows.append(row)
+        return rows
 
     @app.get("/api/matches/{match_id}/frames/{frame}.jpg")
     def get_frame(match_id: int, frame: int, conn: sqlite3.Connection = Depends(db)) -> Response:

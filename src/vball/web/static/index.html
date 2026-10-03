@@ -20,6 +20,7 @@
     </label>
     <label title="Draw the tracked ball and its last 8 positions on the video"><input type="checkbox" id="show-ball"> Show ball</label>
     <label title="Draw the calibrated court lines on the video"><input type="checkbox" id="show-court"> Show court</label>
+    <label title="Draw player boxes with track ids and a top-down court map"><input type="checkbox" id="show-players"> Show players</label>
     <a class="header-link" href="/ball.html" title="Click the ball in sampled frames to score the ball tracker">Ball check →</a>
   </header>
   <main>
@@ -27,6 +28,7 @@
       <div class="video-wrap">
         <video id="video" controls preload="metadata"></video>
         <canvas id="overlay" class="overlay" aria-hidden="true"></canvas>
+        <canvas id="minimap" class="minimap" width="120" height="220" hidden aria-label="Top-down court map"></canvas>
       </div>
       <div id="timeline" class="timeline" title="Click to jump. Blue: detected rallies. Green: your labels. Red: rally being recorded.">
         <div id="tl-detected" class="tl-row tl-detected"></div>
