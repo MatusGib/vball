@@ -379,7 +379,9 @@ for s in camera_segments(p.track_video(1), 0, m['n_frames'], m['width'] / 512):
     print(s.start_frame, s.end_frame, round(displacement(s.ref_to_frame, m['width'], m['height']), 1))"
 ```
 Expected: a segment boundary near 35 % of the set with displacement ≈ 119 px (phase-correlation estimate from phase 2b planning). Paste the output into the commit message.
-- [ ] **Step 6: Commit** `feat: camera-bump detection with ORB + RANSAC`.
+> **Execution note (2026-10-03):** the planned ORB + RANSAC homography passed the synthetic test but failed on real footage: hundreds of segments on Kent 1. Measured causes: (1) frame 0 is often unrepresentative (camera settling, or pointing at the floor in Brunel away 1); (2) the 8-parameter homography wandered by 7–12 px with occasional 47 px jumps; (3) even a similarity fit flipped between two answers (+140 / +97 px) because the gym walls and ceiling repeat. Implemented instead: whole-picture **phase correlation** (pure shift, Hanning window, samples with peak response < 0.05 dropped) + `split_segments` (a move must be confirmed by two consecutive agreeing samples; segment transform = median; threshold **10 px** at 1080p). Real results: Kent 1 → 2 segments (+117 px at 38 %), Kent 2 → 4, Brunel away 1 and 3 → their early re-aims, static sets → 1. New tests cover noise, single outliers and a persistent move.
+
+- [ ] **Step 6: Commit** `feat: camera-bump detection (phase correlation, confirmed moves)`.
 
 ---
 
