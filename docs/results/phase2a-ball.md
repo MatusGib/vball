@@ -27,7 +27,27 @@ Share of frames with a detection, threshold 0.5. "Rally frames" are hand-labelle
 
 More detections in rallies on both held-out sets (+12 and +21 points), including the unseen gym at 60 fps. Dead-time detections also rose by ~1.3 points: either false positives or real balls between rallies; the clicked frames will tell. Rally F1 dipped with the phase 1 parameters; re-tune pending.
 
+## Threshold 0.3 (proxy metrics)
+
+| Held-out set | Model, threshold | Rally frames | Dead time | Rally F1 (current params) |
+|---|---|---|---|---|
+| Kent set 2 | beach, 0.3 | 69.0 % | 4.46 % | 0.817 |
+| Kent set 2 | vball_v1, 0.3 | 74.0 % | 5.57 % | 0.784 |
+| Brunel away set 3 | beach, 0.3 | 55.9 % | 5.51 % | — |
+| Brunel away set 3 | vball_v1, 0.3 | 69.0 % | 5.27 % | — |
+
+A lower threshold also raises in-rally detections (beach 0.3 beats v1 0.5 on Kent 2) but costs more dead-time detections and generalises worse to the other gym (55.9 % vs 59.5 %).
+
+## Rally detection re-tuned on v1 tracks (Kent 1 + 2, `tuning.grid_search`)
+
+| Tracks | Current params mean F1 | Re-tuned mean F1 (Kent 1, Kent 2) | Change |
+|---|---|---|---|
+| beach, 0.5 | 0.915 | 0.918 (0.911, 0.925) | — |
+| vball_v1, 0.5 | 0.884 | **0.920 (0.938, 0.902)** | `min_active_frac` 0.2 → 0.3 |
+
+With one parameter change, rally detection on v1 tracks matches the baseline (held-out Kent 2: 0.902 vs 0.892). Kent 1 was a training set for v1, so its 0.938 is optimistic.
+
 ## Pending
 
-- Clicked-frame precision/recall: baseline, threshold 0.3 (base and v1), v1 at 0.5.
-- `vball tunerallies` on v1 tracks; adopt or reject v1 as default.
+- Clicked-frame precision/recall for all four configurations (needs the Ball check labels).
+- Decision: adopt v1 (+ `min_active_frac` 0.3) or a threshold change as defaults.
