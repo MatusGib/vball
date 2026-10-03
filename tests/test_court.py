@@ -1,7 +1,19 @@
+import json
+
 import numpy as np
 import pytest
 
-from vball.court import LANDMARKS, Calibration, Segment, apply_h, fit_homography, load_calibration, reprojection_errors, save_calibration
+from vball.court import (
+    LANDMARKS,
+    Calibration,
+    Segment,
+    apply_h,
+    calibration_json,
+    fit_homography,
+    load_calibration,
+    reprojection_errors,
+    save_calibration,
+)
 
 # a plausible behind-the-baseline camera: court (m) -> image (px)
 COURT_TO_IMAGE = np.array([[110.0, -20.0, 465.0], [0.0, -25.0, 1000.0], [0.0, 0.035, 1.0]])
@@ -44,3 +56,37 @@ def test_calibration_follows_camera_segments(tmp_path):
     again = load_calibration(tmp_path / "court.json")
     assert np.allclose(again.image_to_court_at(150), cal.image_to_court_at(150))
     assert again.points == cal.points and again.ref_frame == 10
+
+
+NET = [{"landmark": "net_left_top", "x": 300.0, "y": 100.0}, {"landmark": "net_right_top", "x": 900.0, "y": 105.0}]
+
+
+def floor_points(names):
+    image, court = image_of(names)
+    return [{"landmark": n, "x": float(x), "y": float(y)} for n, (x, y) in zip(names, image)], image, court
+
+
+def test_net_points_are_kept_out_of_the_floor_fit(tmp_path):
+    points, image, court = floor_points(["far_left_corner", "far_right_corner", "center_left", "center_right"])
+    shift = np.array([[1.0, 0, 40.0], [0, 1.0, 0], [0, 0, 1.0]])
+    cal = Calibration.create(0, points + NET, [Segment(0, 100, np.eye(3)), Segment(100, 200, shift)])
+    assert cal.points == points and cal.net_points == NET and cal.net_height_m == 2.43
+    assert np.allclose(apply_h(cal.image_to_court, image), court, atol=1e-6)
+    save_calibration(tmp_path / "court.json", cal)
+    again = load_calibration(tmp_path / "court.json")
+    assert again.net_points == NET and again.net_height_m == 2.43
+    body = calibration_json(again)
+    assert len(body["points"]) == 4 and body["net_height_m"] == 2.43
+    assert body["segments"][0]["net_image"] == [[300.0, 100.0], [900.0, 105.0]]
+    assert body["segments"][1]["net_image"] == [[340.0, 100.0], [940.0, 105.0]]  # moved with the camera
+
+
+def test_calibration_without_net_points(tmp_path):
+    points, _, _ = floor_points(["far_left_corner", "far_right_corner", "center_left", "center_right"])
+    save_calibration(tmp_path / "court.json", Calibration.create(0, points, []))
+    data = json.loads((tmp_path / "court.json").read_text())
+    del data["net_points"], data["net_height_m"]  # a file saved before net points existed
+    (tmp_path / "court.json").write_text(json.dumps(data))
+    cal = load_calibration(tmp_path / "court.json")
+    assert cal.net_points == [] and cal.net_height_m == 2.43
+    assert calibration_json(cal)["segments"][0]["net_image"] == [None, None]

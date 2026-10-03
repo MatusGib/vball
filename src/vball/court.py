@@ -11,6 +11,7 @@ import cv2
 import numpy as np
 
 COURT_WIDTH, COURT_LENGTH, NET_Y = 9.0, 18.0, 9.0
+NET_HEIGHT_M = 2.43  # men's indoor; 2.24 for women
 LANDMARKS = {
     "near_left_corner": (0.0, 0.0),
     "near_right_corner": (9.0, 0.0),
@@ -23,6 +24,9 @@ LANDMARKS = {
     "far_left_corner": (0.0, 18.0),
     "far_right_corner": (9.0, 18.0),
 }
+# top of the net tape at each sideline (court x, y); the height is Calibration.net_height_m.
+# Not floor points: stored for 3D work, never used in the floor homography.
+NET_LANDMARKS = {"net_left_top": (0.0, NET_Y), "net_right_top": (COURT_WIDTH, NET_Y)}
 COURT_LINES = [
     ((0.0, 0.0), (0.0, 18.0)),
     ((9.0, 0.0), (9.0, 18.0)),
@@ -68,15 +72,19 @@ class Segment:
 @dataclass
 class Calibration:
     ref_frame: int
-    points: list[dict]  # {"landmark", "x", "y"} in work-video pixels at ref_frame
+    points: list[dict]  # {"landmark", "x", "y"} in work-video pixels at ref_frame (floor landmarks only)
     image_to_court: np.ndarray  # at ref_frame
     segments: list[Segment] = field(default_factory=list)
+    net_points: list[dict] = field(default_factory=list)  # NET_LANDMARKS clicked at ref_frame
+    net_height_m: float = NET_HEIGHT_M
 
     @classmethod
     def create(cls, ref_frame: int, points: list[dict], segments: list[Segment]) -> "Calibration":
-        image = np.array([[p["x"], p["y"]] for p in points])
-        court = np.array([LANDMARKS[p["landmark"]] for p in points])
-        return cls(ref_frame, points, fit_homography(image, court), segments)
+        floor = [p for p in points if p["landmark"] in LANDMARKS]
+        net = [p for p in points if p["landmark"] in NET_LANDMARKS]
+        image = np.array([[p["x"], p["y"]] for p in floor])
+        court = np.array([LANDMARKS[p["landmark"]] for p in floor])
+        return cls(ref_frame, floor, fit_homography(image, court), segments, net)
 
     def errors(self) -> np.ndarray:
         image = np.array([[p["x"], p["y"]] for p in self.points])
@@ -105,6 +113,8 @@ def save_calibration(path: Path, cal: Calibration) -> None:
             {"start_frame": s.start_frame, "end_frame": s.end_frame, "ref_to_frame": s.ref_to_frame.tolist()}
             for s in cal.segments
         ],
+        "net_points": cal.net_points,
+        "net_height_m": cal.net_height_m,
     }
     path.write_text(json.dumps(data, indent=1), encoding="utf-8")
 
@@ -112,12 +122,26 @@ def save_calibration(path: Path, cal: Calibration) -> None:
 def load_calibration(path: Path) -> Calibration:
     data = json.loads(path.read_text(encoding="utf-8"))
     segments = [Segment(s["start_frame"], s["end_frame"], np.array(s["ref_to_frame"])) for s in data["segments"]]
-    return Calibration(data["ref_frame"], data["points"], np.array(data["image_to_court"]), segments)
+    return Calibration(
+        data["ref_frame"], data["points"], np.array(data["image_to_court"]), segments,
+        data.get("net_points", []), data.get("net_height_m", NET_HEIGHT_M),
+    )
 
 
 def calibration_json(cal: Calibration) -> dict:
     """What the viewer needs: clicked points with their errors and a court -> image matrix per segment."""
     errors = cal.errors()
+
+    def net_image(seg: Segment) -> list:
+        out = []
+        for name in NET_LANDMARKS:
+            p = next((q for q in cal.net_points if q["landmark"] == name), None)
+            if p is None:
+                out.append(None)
+            else:
+                out.append([round(float(v), 1) for v in apply_h(seg.ref_to_frame, [[p["x"], p["y"]]])[0]])
+        return out
+
     return {
         "ref_frame": cal.ref_frame,
         "points": [{**p, "error_px": round(float(e), 1)} for p, e in zip(cal.points, errors)],
@@ -127,9 +151,13 @@ def calibration_json(cal: Calibration) -> dict:
                 "start_frame": s.start_frame,
                 "end_frame": s.end_frame,
                 "court_to_image": np.linalg.inv(cal.image_to_court_at(s.start_frame)).tolist(),
+                "net_image": net_image(s),
             }
             for s in (cal.segments or [Segment(0, 1 << 62, np.eye(3))])
         ],
         "lines": COURT_LINES,
         "landmarks": LANDMARKS,
+        "net_points": cal.net_points,
+        "net_height_m": cal.net_height_m,
+        "net_landmarks": NET_LANDMARKS,
     }
