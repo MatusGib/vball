@@ -10,11 +10,12 @@ from vball.ball.track import load_tracknet_csv
 from vball.ball.tracknet import run_tracknet
 from vball.config import BASE_TRACKNET_WEIGHTS, TRACKNET_THRESHOLD, TRACKNET_WEIGHTS, default_paths
 from vball.court import load_calibration
+from vball.serve import ServeParams
 from vball.evaluate import rally_metrics, restrict_to_span, visible_fraction
 from vball.export import export_rallies
 from vball.labels import load_labels
 from vball.rallies import RallyParams
-from vball.tuning import GRID, TuneCase, grid_search
+from vball.tuning import GRID, SERVE_GRID, TuneCase, grid_search
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -136,12 +137,20 @@ def main(argv: list[str] | None = None) -> int:
                 m = store.get_match(conn, match_id)
                 track = load_tracknet_csv(paths.ball_csv(match_id), m["n_frames"])
                 gt = [(label.start_s, label.end_s) for label in load_labels(paths.gt_csv(match_id))]
-                cases.append(TuneCase(track, m["fps"], m["width"], m["height"], gt))
+                serve = None
+                if pipeline.serve_status(paths, match_id) == "serve check on":
+                    players = pl_mod.load_players(paths.players_csv(match_id))
+                    court_xy, _, _ = pl_mod.with_court(players, load_calibration(paths.court_json(match_id)))
+                    serve = (players, court_xy)
+                cases.append(TuneCase(track, m["fps"], m["width"], m["height"], gt, serve))
         finally:
             conn.close()
-        current = grid_search(cases, grid={k: [v] for k, v in vars(RallyParams()).items() if k in GRID})[0]
+        grid = SERVE_GRID if all(c.serve is not None for c in cases) else GRID
+        print("serve check on" if grid is SERVE_GRID else "serve check off (a match lacks player tracks or a court)")
+        defaults = {**vars(RallyParams()), **vars(ServeParams())}
+        current = grid_search(cases, grid={k: [defaults[k]] for k in grid})[0]
         print(f"current defaults: mean F1 {current.mean_f1:.3f} per match {[round(f, 3) for f in current.f1s]}")
-        for r in grid_search(cases)[: args.top]:
+        for r in grid_search(cases, grid)[: args.top]:
             print(f"mean F1 {r.mean_f1:.3f} per match {[round(f, 3) for f in r.f1s]} {r.params}")
         return 0
 
