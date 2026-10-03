@@ -206,3 +206,14 @@ def test_players_window_limits(tmp_path):
     assert client.get(f"/api/matches/{match_id}/players?start=0&end=5000").status_code == 422
     page = client.get("/").text
     assert 'id="show-players"' in page and 'id="minimap"' in page
+
+
+def test_court_calibration_accepts_net_points(tmp_path):
+    client, match_id = make_client(tmp_path)
+    points = court_points(["far_left_corner", "far_right_corner", "center_left", "center_right"])
+    points.append({"landmark": "net_left_top", "x": 400.0, "y": 300.0})
+    res = client.put(f"/api/matches/{match_id}/court", json={"ref_frame": 0, "points": points})
+    assert res.status_code == 200
+    body = res.json()
+    assert len(body["points"]) == 4 and body["net_points"][0]["landmark"] == "net_left_top"
+    assert body["segments"][0]["net_image"] == [[400.0, 300.0], None]

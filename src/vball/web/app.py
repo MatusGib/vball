@@ -13,7 +13,7 @@ from pydantic import BaseModel
 from vball import store
 from vball.ball.testset import BallTestItem, load_ball_test, sample_test_frames, save_ball_test
 from vball.camera import camera_segments
-from vball.court import LANDMARKS, Calibration, calibration_json, load_calibration, save_calibration
+from vball.court import LANDMARKS, NET_LANDMARKS, Calibration, calibration_json, load_calibration, save_calibration
 from vball.ball.track import load_tracknet_csv
 from vball.config import Paths
 from vball.labels import Label, load_labels, save_labels
@@ -145,7 +145,7 @@ def create_app(paths: Paths) -> FastAPI:
     @app.put("/api/matches/{match_id}/court")
     def put_court(match_id: int, body: CourtBody, conn: sqlite3.Connection = Depends(db)) -> dict:
         match = require_match(conn, match_id)
-        unknown = [p.landmark for p in body.points if p.landmark not in LANDMARKS]
+        unknown = [p.landmark for p in body.points if p.landmark not in LANDMARKS and p.landmark not in NET_LANDMARKS]
         if unknown:
             raise HTTPException(status_code=422, detail=f"unknown landmarks: {unknown}")
         # reads the whole 512x288 copy to find camera moves: ~30-60 s on a real set
