@@ -30,4 +30,13 @@ Notes on running the external script:
 
 ## Ball v2 (`models/tracknet_vball_v2.pt`)
 
-`vball finetune --matches 1 3 4 5 6 7 8 9 10 --vballnet data/external/vballnet-dataset/data --windows 3000 --rebuild-cache`: 98 sources (9 own pseudo-labelled sets + 89 VballNet hand-labelled clips), 3,000 windows (9.8 GB cache), 4 epochs, loss 8e-5 → 5e-5. Evaluation pending.
+`vball finetune --matches 1 3 4 5 6 7 8 9 10 --vballnet data/external/vballnet-dataset/data --windows 3000 --rebuild-cache`: 98 sources (9 own pseudo-labelled sets + 89 VballNet hand-labelled clips), 3,000 windows (9.8 GB cache), 4 epochs, loss 8e-5 → 5e-5, ~40 min including cache build.
+
+| Held-out set | v1 @ 0.3 (current) | v2 @ 0.3 | v2 @ 0.5 | VballNetV4c |
+|---|---|---|---|---|
+| Kent 2 P / R @15 px (@30 px) | 0.67 / 0.73 (0.83 / 0.77) | 0.65 / **0.90** (0.83 / 0.92) | 0.71 / 0.72 (0.90 / 0.77) | **0.84 / 0.94** (0.84 / 0.94) |
+| Brunel away 3 P / R @15 px (@30 px) | 0.87 / 0.66 (0.93 / 0.68) | 0.83 / **0.84** (0.90 / 0.85) | 0.87 / 0.68 (0.92 / 0.69) | 0.83 / 0.69 (0.85 / 0.70) |
+
+Rally F1 (Kent 1 + 2): v1 @ 0.3 0.909 (0.916, 0.902); v2 @ 0.3 0.834 with current params, 0.893 (0.881, 0.905) re-tuned (`window_s` 2, `min_rally_s` 2, `post_pad_s` 0.5).
+
+Against the adoption rule fixed before training (higher recall at **no worse** precision than v1 @ 0.3, rally F1 within −0.02): v2 @ 0.3 gains +17 / +18 recall points but loses 2 / 4 precision points (level / −3 at 30 px), rally F1 −0.016. **Strictly, v2 does not qualify.** Its recall in the unseen gym (0.84) is the best of any model, so the VballNet labels clearly help generalisation.
