@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from helpers import make_track, write_tracknet_csv
 
 from vball import store
@@ -115,3 +117,21 @@ def test_tunerallies_prints_current_and_best(tmp_path, monkeypatch, capsys):
     lines = capsys.readouterr().out.strip().splitlines()
     assert lines[0].startswith("current defaults: mean F1 1.000")
     assert len(lines) == 3 and all(line.startswith("mean F1") for line in lines[1:])
+
+
+def test_process_passes_weights_and_threshold_to_ball_tracker(tmp_path, monkeypatch, capsys):
+    monkeypatch.setenv("VBALL_DATA", str(tmp_path / "data"))
+    seen = {}
+
+    def fake_process_match(video, paths, name, encoder, ball_runner):
+        ball_runner(tmp_path / "work.mp4", tmp_path / "ball.csv")
+        return 7
+
+    def fake_run_tracknet(video, out_csv, weights, threshold):
+        seen.update(weights=weights, threshold=threshold)
+
+    monkeypatch.setattr("vball.cli.pipeline.process_match", fake_process_match)
+    monkeypatch.setattr("vball.cli.run_tracknet", fake_run_tracknet)
+    assert main(["process", "m.mp4", "--weights", "base.pt", "--threshold", "0.5"]) == 0
+    assert seen == {"weights": Path("base.pt"), "threshold": 0.5}
+    assert "match 7 processed" in capsys.readouterr().out

@@ -23,6 +23,8 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("video", type=Path)
     p.add_argument("--name")
     p.add_argument("--encoder", default="libx264", help="ffmpeg encoder; h264_nvenc needs NVIDIA driver >= 610")
+    p.add_argument("--weights", type=Path, default=TRACKNET_WEIGHTS, help="TrackNet checkpoint for ball tracking")
+    p.add_argument("--threshold", type=float, default=TRACKNET_THRESHOLD)
 
     r = sub.add_parser("redetect", help="re-run rally detection from the cached ball track")
     r.add_argument("match_id", type=int)
@@ -68,7 +70,15 @@ def main(argv: list[str] | None = None) -> int:
     paths = default_paths()
 
     if args.command == "process":
-        match_id = pipeline.process_match(args.video, paths, name=args.name, encoder=args.encoder)
+        match_id = pipeline.process_match(
+            args.video,
+            paths,
+            name=args.name,
+            encoder=args.encoder,
+            ball_runner=lambda video, out_csv: run_tracknet(
+                video, out_csv, weights=args.weights, threshold=args.threshold
+            ),
+        )
         print(f"match {match_id} processed")
         return 0
 

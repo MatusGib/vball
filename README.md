@@ -7,7 +7,7 @@ Personal Balltime-style volleyball video analysis. Phase 1: rally cutting.
 1. `winget install --id Gyan.FFmpeg -e`
 2. Install [uv](https://docs.astral.sh/uv/), then in this folder: `uv sync --extra dev`
 3. `uv run python scripts/download_models.py` (beach-volleyball TrackNet weights, the starting point)
-4. The default ball tracker is fine-tuned on our own footage and is not in git. After processing some matches with `--weights models/tracknet_volleyball.pt`, rebuild it with
+4. The default ball tracker is fine-tuned on our own footage and is not in git. After processing some matches with `vball process <video> --weights models/tracknet_volleyball.pt --threshold 0.5`, rebuild it with
    `uv run vball finetune --matches <ids> --out models/tracknet_vball_v1.pt --rebuild-cache` (see `docs/results/phase2a-ball.md`).
 
 ## Use
