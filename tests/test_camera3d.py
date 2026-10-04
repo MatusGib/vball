@@ -40,3 +40,11 @@ def test_projection_follows_camera_bumps_and_rays_point_back():
     assert np.allclose(cam.to_ref(cam.project(p, 150), 150), cam.project_ref(p))
     v = p[0] - cam.centre()
     assert np.allclose(cam.rays(cam.project_ref(p))[0], v / np.linalg.norm(v))
+
+
+def test_points_clicked_outside_the_picture_are_not_used():
+    cal = calibration(with_net=True)
+    cal.points[-1] = {**cal.points[-1], "x": -300.0}  # an off-screen guess, far from the truth
+    cam, err = fit_camera(cal, W, H)
+    assert abs(cam.K[0, 0] - 1400) < 14 and np.allclose(cam.centre(), [4.5, -5.0, 1.5], atol=0.05)
+    assert len(err) == 12 and err[9] > 100  # still reported

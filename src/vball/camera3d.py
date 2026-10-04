@@ -61,13 +61,18 @@ def _pose(obj, img, n_floor, f, width, height):
 
 
 def fit_camera(cal: Calibration, width: int, height: int) -> tuple[Camera3D, np.ndarray]:
-    """Focal length by a bounded 1-D search, pose by solvePnP. Returns the camera and each clicked point's
-    reprojection error in pixels (floor points first, then net points)."""
+    """Focal length by a bounded 1-D search, pose by solvePnP. Points clicked outside the picture (guessed
+    off-screen corners) are left out of the fit. Returns the camera and every clicked point's reprojection error
+    in pixels (floor points first, then net points)."""
     obj, img, n_floor = clicked_points(cal)
+    inside = (img[:, 0] >= 0) & (img[:, 0] < width) & (img[:, 1] >= 0) & (img[:, 1] < height)
+    used_obj, used_img, used_floor = obj[inside], img[inside], int(inside[:n_floor].sum())
 
     def rms(log_f: float) -> float:
-        return float(np.sqrt(np.mean(_pose(obj, img, n_floor, math.exp(log_f), width, height)[3] ** 2)))
+        err = _pose(used_obj, used_img, used_floor, math.exp(log_f), width, height)[3]
+        return float(np.sqrt(np.mean(err**2)))
 
     best = minimize_scalar(rms, bounds=(math.log(0.3 * width), math.log(5.0 * width)), method="bounded")
-    K, rvec, tvec, err = _pose(obj, img, n_floor, math.exp(best.x), width, height)
-    return Camera3D(K, cv2.Rodrigues(rvec)[0], tvec.reshape(3), cal), err
+    K, rvec, tvec, _ = _pose(used_obj, used_img, used_floor, math.exp(best.x), width, height)
+    cam = Camera3D(K, cv2.Rodrigues(rvec)[0], tvec.reshape(3), cal)
+    return cam, np.linalg.norm(cam.project_ref(obj) - img, axis=1)
