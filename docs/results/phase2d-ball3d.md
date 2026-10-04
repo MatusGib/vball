@@ -1,7 +1,6 @@
 # Phase 2d — 3D ball flights from one camera (interim)
 
-Date: 2026-10-04. Spec: `docs/superpowers/specs/2026-10-04-ball3d-design.md`. Status: **interim** — measured
-with floor-only camera fits; the net-tape clicks (which pin the vertical scale) are not in yet.
+Date: 2026-10-04. Spec: `docs/superpowers/specs/2026-10-04-ball3d-design.md`. Status: **interim**. Net-tape clicks added on Kent 1, Kent 2 and Brunel away 3 (see below).
 
 ## Camera fits (`vball camera <id>`, floor points only)
 
@@ -14,6 +13,11 @@ Near corners clicked outside the picture are guesses; including them moved the K
 the error to 13 px mean / 28 px max, so the camera fit now ignores clicks outside the frame (they still count in
 the floor homography used for players — not changed). Brunel away 3 is filmed from ~0.5 m up: its far half-court
 is ~25 px tall.
+
+**With the net clicks** (2026-10-04, later): the net tops reproject within 2.8 / 1.7 px (Kent 1), 8.0 / 4.6 px
+(Kent 2) and 15.8 / 15.3 px (Brunel away 3) of the clicks; Kent 1's camera moved by under 1 cm and 3 px of focal
+length. Re-running `vball ball3d` changed serve medians by 1–4 km/h and the plausible shares by a few points
+(Kent 1 64%, Kent 2 69%, Brunel away 3 60% in 40–100 km/h). The camera is therefore not what limits real serves.
 
 ## Simulation (`vball ball3dsim <id> --count 100`)
 
@@ -63,6 +67,5 @@ fit: several far-side serves pin the start at the fit's limit (6 m behind the fa
 
 ## Next
 
-1. Net clicks on Kent 1, Kent 2, Brunel away 3; re-run `vball camera` and `vball ball3d`.
-2. Reject fits that end on a bound; split the toss from the serve.
-3. If serves stay plausible: a landing check page (click where serves land) for real ground truth.
+1. Reject fits that end on a bound; split the toss from the serve.
+2. If serves stay plausible: a landing check page (click where serves land) for real ground truth.

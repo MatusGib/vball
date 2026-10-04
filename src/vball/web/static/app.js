@@ -588,8 +588,82 @@ function drawCourt(ctx, frame, r) {
   }
 }
 
+// magnifier for precise clicks while calibrating
+const loupe = $("#loupe");
+const LOUPE_PX = 180; // on-screen size, CSS px
+let loupeSpan = 60; // video pixels shown across the magnifier; the mouse wheel changes it
+
+function videoPoint(e) {
+  const rect = overlay.getBoundingClientRect();
+  const r = contentRect();
+  const cx = e.clientX - rect.left;
+  const cy = e.clientY - rect.top;
+  return { x: (cx - r.x) / r.scale, y: (cy - r.y) / r.scale, cx, cy };
+}
+
+function drawLoupe(p) {
+  const dpr = window.devicePixelRatio || 1;
+  loupe.width = loupe.height = Math.round(LOUPE_PX * dpr);
+  const ctx = loupe.getContext("2d");
+  const k = loupe.width / loupeSpan; // canvas px per video px
+  const toLoupe = (q) => [(q.x - p.x + loupeSpan / 2) * k, (q.y - p.y + loupeSpan / 2) * k];
+  ctx.imageSmoothingEnabled = false;
+  ctx.fillStyle = "#000";
+  ctx.fillRect(0, 0, loupe.width, loupe.height);
+  ctx.drawImage(video, p.x - loupeSpan / 2, p.y - loupeSpan / 2, loupeSpan, loupeSpan, 0, 0, loupe.width, loupe.height);
+  ctx.fillStyle = "#22d3ee";
+  for (const q of calib.points) {
+    const [x, y] = toLoupe(q);
+    ctx.beginPath();
+    ctx.arc(x, y, 4 * dpr, 0, 2 * Math.PI);
+    ctx.fill();
+  }
+  const c = loupe.width / 2;
+  const gap = 4 * dpr;
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.95)";
+  ctx.lineWidth = dpr;
+  ctx.beginPath();
+  for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+    ctx.moveTo(c + dx * gap, c + dy * gap);
+    ctx.lineTo(c + dx * c, c + dy * c);
+  }
+  ctx.stroke();
+  const next = LANDMARK_ORDER[calib.index];
+  ctx.font = `${12 * dpr}px system-ui`;
+  ctx.textAlign = "center";
+  ctx.fillStyle = "#fff";
+  ctx.fillText(next ? next.replaceAll("_", " ") : "all done", c, loupe.height - 22 * dpr);
+  ctx.fillText(`${(LOUPE_PX / loupeSpan / contentRect().scale).toFixed(1)}x`, c, 22 * dpr);
+  const wrap = overlay.getBoundingClientRect();
+  let left = p.cx + 24;
+  let top = p.cy - LOUPE_PX - 24;
+  if (left + LOUPE_PX > wrap.width) left = p.cx - LOUPE_PX - 24;
+  if (top < 0) top = p.cy + 24;
+  loupe.style.left = `${left}px`;
+  loupe.style.top = `${top}px`;
+  loupe.hidden = false;
+}
+
+overlay.addEventListener("mousemove", (e) => {
+  if (calib) drawLoupe(videoPoint(e));
+});
+overlay.addEventListener("mouseleave", () => {
+  loupe.hidden = true;
+});
+overlay.addEventListener(
+  "wheel",
+  (e) => {
+    if (!calib) return;
+    e.preventDefault();
+    loupeSpan = Math.min(240, Math.max(15, loupeSpan * (e.deltaY > 0 ? 1.25 : 0.8)));
+    drawLoupe(videoPoint(e));
+  },
+  { passive: false },
+);
+
 function renderCalib() {
   $("#calib-panel").hidden = !calib;
+  if (!calib) loupe.hidden = true;
   overlay.style.pointerEvents = calib ? "auto" : "none";
   overlay.style.cursor = calib ? "crosshair" : "";
   if (!calib) {
@@ -632,13 +706,11 @@ function startCalibration() {
 
 overlay.addEventListener("click", (e) => {
   if (!calib || calib.index >= LANDMARK_ORDER.length) return;
-  const rect = overlay.getBoundingClientRect();
-  const r = contentRect();
-  const x = (e.clientX - rect.left - r.x) / r.scale;
-  const y = (e.clientY - rect.top - r.y) / r.scale;
-  calib.points.push({ landmark: LANDMARK_ORDER[calib.index], x, y });
+  const p = videoPoint(e);
+  calib.points.push({ landmark: LANDMARK_ORDER[calib.index], x: p.x, y: p.y });
   calib.index = nextMissing(calib.index + 1);
   renderCalib();
+  drawLoupe(p);
 });
 
 bind("#btn-calibrate", startCalibration);

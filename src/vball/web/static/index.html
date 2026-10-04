@@ -29,6 +29,7 @@
         <video id="video" controls preload="metadata"></video>
         <canvas id="overlay" class="overlay" aria-hidden="true"></canvas>
         <canvas id="minimap" class="minimap" width="120" height="220" hidden aria-label="Top-down court map"></canvas>
+        <canvas id="loupe" class="loupe" hidden aria-hidden="true"></canvas>
       </div>
       <div id="timeline" class="timeline" title="Click to jump. Blue: detected rallies. Green: your labels. Red: rally being recorded.">
         <div id="tl-detected" class="tl-row tl-detected"></div>
@@ -56,7 +57,7 @@
     <aside>
       <section id="calib-panel" hidden>
         <h2>Court calibration</h2>
-        <p class="help">Pause on a frame where the court lines are clear. Click each landmark on the video in turn; press <em>Skip</em> for any you can't see. At least 4 are needed. Left/right as seen from the camera; "near" is the camera end. The last two are the top of the net tape where it meets each antenna; they are optional. Re-opening a saved calibration keeps its points, so you only click what is missing.</p>
+        <p class="help">Pause on a frame where the court lines are clear. Click each landmark on the video in turn; press <em>Skip</em> for any you can't see. At least 4 are needed. Left/right as seen from the camera; "near" is the camera end. The last two are the top of the net tape where it meets each antenna; they are optional. Re-opening a saved calibration keeps its points, so you only click what is missing. A magnifier follows the cursor: scroll to zoom in or out.</p>
         <ol id="calib-list" class="list"></ol>
         <button id="calib-skip">Skip</button>
         <button id="calib-undo">Undo</button>

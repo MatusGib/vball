@@ -176,7 +176,7 @@ def test_court_calibration_rejects_bad_input(tmp_path):
 def test_viewer_has_calibration_controls(tmp_path):
     client, _ = make_client(tmp_path)
     page = client.get("/").text
-    for element_id in ("show-court", "btn-calibrate", "calib-panel", "calib-save"):
+    for element_id in ("show-court", "btn-calibrate", "calib-panel", "calib-save", "loupe"):
         assert f'id="{element_id}"' in page
 
 
