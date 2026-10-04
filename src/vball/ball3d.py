@@ -89,3 +89,83 @@ def split_flights(
         cur.append(f)
     pieces.append(cur)
     return [(p[0], p[-1] + 1) for p in pieces if len(p) >= min_obs]
+
+
+@dataclass
+class Flight:
+    start_frame: int  # first observed frame; p0, v0 are the state there
+    end_frame: int  # last observed frame + 1
+    n_obs: int
+    p0: np.ndarray
+    v0: np.ndarray
+    rms_px: float  # over inliers
+    inlier_share: float
+
+
+def _pixels(cam: Camera3D, pts: np.ndarray) -> np.ndarray:
+    """Like cam.project_ref, but points behind or at the camera are pushed to 0.5 m in front (finite residuals)."""
+    c = pts @ cam.R.T + cam.t
+    z = np.maximum(c[:, 2:3], 0.5)
+    return c[:, :2] / z * [cam.K[0, 0], cam.K[1, 1]] + cam.K[:2, 2]
+
+
+def _free_residuals(x, cam, t, uv_ref):
+    pts = x[:3] + np.outer(t, x[3:]) + np.outer(0.5 * t**2, [0.0, 0.0, -G])
+    return (_pixels(cam, pts) - uv_ref).ravel()
+
+
+def _drag_residuals(x, cam, idx, n, fps, uv_ref):
+    return (_pixels(cam, simulate(x[:3], x[3:], n, fps)[idx]) - uv_ref).ravel()
+
+
+def _drag_jacobian(x, cam, idx, n, fps, uv_ref):
+    """Forward differences, all 7 trajectories integrated in one batch."""
+    steps = 1e-4 * np.maximum(1.0, np.abs(x))
+    X = np.tile(x, (7, 1))
+    X[1:] += np.diag(steps)
+    traj = simulate(X[:, :3], X[:, 3:], n, fps)
+    r = [(_pixels(cam, traj[b, idx]) - uv_ref).ravel() for b in range(7)]
+    return np.stack([(r[j + 1] - r[0]) / steps[j] for j in range(6)], axis=1)
+
+
+def _seed_points(cam: Camera3D, ray: np.ndarray) -> list[np.ndarray]:
+    c = cam.centre()
+    pts = [c + (h - c[2]) / ray[2] * ray for h in SEED_HEIGHTS if abs(ray[2]) > 1e-6 and (h - c[2]) / ray[2] > 0]
+    return pts if len(pts) >= 2 else pts + [c + d * ray for d in SEED_DISTANCES]
+
+
+def _seeds(cam: Camera3D, uv_ref: np.ndarray, duration: float) -> list[np.ndarray]:
+    first, last = cam.rays(uv_ref[[0, -1]])
+    seeds = []
+    for a in _seed_points(cam, first):
+        for b in _seed_points(cam, last):
+            v = (b - a) / duration + [0.0, 0.0, 0.5 * G * duration]
+            seeds.append(np.clip(np.concatenate([a, v]), LOWER + 1e-6, UPPER - 1e-6))
+    return seeds
+
+
+def fit_flight(cam: Camera3D, frames, uv, fps: float, noise_px: float = NOISE_PX) -> Flight | None:
+    """Fit a drag-affected 3D arc to tracked pixels (uv in each frame's own pixels). None if the arc does not
+    explain at least 80% of the observations within 3 * noise_px."""
+    frames = np.asarray(frames, dtype=int)
+    uv = np.asarray(uv, dtype=np.float64)
+    uv_ref = np.vstack([cam.to_ref(uv[i : i + 1], int(f)) for i, f in enumerate(frames)])
+    idx = frames - frames[0]
+    t = idx / fps
+    seeds = _seeds(cam, uv_ref, max(t[-1], 1.0 / fps))
+    fits = [
+        least_squares(_free_residuals, s, bounds=(LOWER, UPPER), loss="soft_l1", f_scale=noise_px,
+                      args=(cam, t, uv_ref))
+        for s in seeds
+    ]
+    best = min(fits, key=lambda r: r.cost)
+    res = least_squares(
+        _drag_residuals, best.x, jac=_drag_jacobian, bounds=(LOWER, UPPER), loss="soft_l1", f_scale=noise_px,
+        args=(cam, idx, int(idx[-1]) + 1, fps, uv_ref),
+    )
+    err = np.linalg.norm(res.fun.reshape(-1, 2), axis=1)
+    inliers = err <= 3 * noise_px
+    if inliers.mean() < 0.8:
+        return None
+    return Flight(int(frames[0]), int(frames[-1]) + 1, len(frames), res.x[:3], res.x[3:],
+                  float(np.sqrt(np.mean(err[inliers] ** 2))), float(inliers.mean()))

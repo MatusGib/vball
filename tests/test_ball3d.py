@@ -2,7 +2,7 @@ import numpy as np
 from helpers import make_camera
 
 from vball.ball.track import BallTrack
-from vball.ball3d import G, flight_metrics, simulate, split_flights
+from vball.ball3d import G, fit_flight, flight_metrics, simulate, split_flights
 
 FPS = 30
 
@@ -42,3 +42,33 @@ def test_split_cuts_at_a_touch_and_a_long_gap():
     visible[np.r_[f, g, h]] = True
     pieces = split_flights(BallTrack(visible, x, y), 0, n, FPS)
     assert [(a, b) for a, b in pieces] == [(0, 20), (20, 40), (80, 100)]
+
+
+def serve_observations(cam, n=30, p0=(4.5, -1.0, 2.8), v0=(0.0, 22.0, 2.0)):
+    traj = simulate(np.array(p0), np.array(v0), n, FPS)
+    return np.arange(n), cam.project_ref(traj)
+
+
+def test_fit_recovers_a_noiseless_serve():
+    cam = make_camera()
+    frames, uv = serve_observations(cam)
+    fit = fit_flight(cam, frames, uv, FPS)
+    assert fit is not None and fit.rms_px < 0.5
+    assert abs(np.linalg.norm(fit.v0) - np.linalg.norm([0.0, 22.0, 2.0])) * 3.6 < 1.0
+    assert np.allclose(fit.p0, [4.5, -1.0, 2.8], atol=0.1)
+
+
+def test_fit_ignores_a_few_wrong_detections():
+    cam = make_camera()
+    frames, uv = serve_observations(cam)
+    uv[[7, 18]] += [[300.0, -200.0], [-250.0, 150.0]]
+    fit = fit_flight(cam, frames, uv, FPS)
+    assert fit is not None and fit.inlier_share >= 0.9
+    assert abs(np.linalg.norm(fit.v0) - np.linalg.norm([0.0, 22.0, 2.0])) * 3.6 < 2.0
+
+
+def test_fit_rejects_a_path_no_ball_can_fly():
+    cam = make_camera()
+    a = np.linspace(0, 2 * np.pi, 30)
+    uv = np.stack([960 + 200 * np.cos(a), 400 + 200 * np.sin(a)], axis=1)  # a circle
+    assert fit_flight(cam, np.arange(30), uv, FPS) is None
