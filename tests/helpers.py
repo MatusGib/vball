@@ -59,3 +59,17 @@ def write_tracknet_csv(path: Path, track: BallTrack) -> Path:
             lines.append(f"{i},0,0,0")
     path.write_text("\n".join(lines) + "\n")
     return path
+
+
+def make_camera(segments=(), f=1400.0, centre=(4.5, -5.0, 1.5), target=(4.5, 9.0, 1.0), size=(1920, 1080)):
+    """A behind-the-baseline pinhole camera looking down the court (court metres, z up)."""
+    from vball.camera3d import Camera3D
+    from vball.court import Calibration
+
+    c, tgt = np.array(centre, dtype=float), np.array(target, dtype=float)
+    z = (tgt - c) / np.linalg.norm(tgt - c)
+    x = np.cross(z, [0.0, 0.0, 1.0])
+    x /= np.linalg.norm(x)
+    R = np.stack([x, np.cross(z, x), z])
+    K = np.array([[f, 0.0, size[0] / 2], [0.0, f, size[1] / 2], [0.0, 0.0, 1.0]])
+    return Camera3D(K, R, -R @ c, Calibration(0, [], np.eye(3), list(segments)))
