@@ -18,6 +18,7 @@ dependencies = [
     "ultralytics>=8.4.172",
     "lap>=0.5.13",
     "torchvision>=0.29.1",
+    "scipy>=1.18.1",
 ]
 
 [project.optional-dependencies]
