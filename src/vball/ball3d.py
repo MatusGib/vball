@@ -1,6 +1,7 @@
 """3D ball flights from one camera: drag physics, flight segmentation, robust multi-seed fit, metrics
 (docs/superpowers/specs/2026-10-04-ball3d-design.md). Court metres, z up."""
 
+import csv
 import math
 from dataclasses import dataclass
 
@@ -193,8 +194,6 @@ def match_flights(cam: Camera3D, track: BallTrack, rallies, fps: float, noise_px
 
 
 def save_flights(path, rows: list[dict]) -> None:
-    import csv
-
     with open(path, "w", newline="") as f:
         writer = csv.DictWriter(f, FLIGHT_COLUMNS, lineterminator="\n")
         writer.writeheader()
