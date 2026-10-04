@@ -51,10 +51,13 @@ fitted to the last 6 points predicts the next point; an error over `max(25 px, 4
 touch). Flights with fewer than 8 visible frames are dropped.
 
 **Fit** (`fit_flight(cam, frames, uv, fps)`): unknowns p0, v0 at the flight's first frame (6). Residuals: the
-projected simulated positions against the tracked pixels (constant offset removed), `least_squares` with
-`soft_l1` loss and bounds (p0 within the court ± 6 m, 0 ≤ z0 ≤ 6 m, |v0| ≤ 40 m/s). Monocular depth makes the
-fit multi-modal, so it starts from 9 seeds: the first and last observation rays intersected with planes at
-heights {1, 2.5, 4} m; the lowest cost wins. Accepted if the RMS reprojection error ≤ `3σ`.
+projected simulated positions against the tracked pixels (the 2–6 px constant offset is left in: it is below
+the jitter), `least_squares` with `soft_l1` loss (scale σ) and bounds (p0 within the court ± 6 m,
+0 ≤ z0 ≤ 6 m, each velocity component within ±40 m/s). Monocular depth makes the fit multi-modal, so it starts
+from 9 seeds: the first and last observation rays intersected with planes at heights {1, 2.5, 4} m. Seeds are
+fitted with the closed-form drag-free arc (fast); the best is refined with drag. Accepted if at least 80% of
+observations lie within `3σ` of the fitted arc (TrackNet has occasional wrong detections); `rms_px` is over
+those inliers. σ defaults to 6 px.
 
 **Metrics** per accepted flight: start speed (km/h), apex height, net-crossing height (z where y = 9, if the
 flight crosses), landing point (x, y where z reaches 0, if it does within the flight + 0.5 s), flight time.
