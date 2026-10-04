@@ -169,3 +169,52 @@ def fit_flight(cam: Camera3D, frames, uv, fps: float, noise_px: float = NOISE_PX
         return None
     return Flight(int(frames[0]), int(frames[-1]) + 1, len(frames), res.x[:3], res.x[3:],
                   float(np.sqrt(np.mean(err[inliers] ** 2))), float(inliers.mean()))
+
+
+FLIGHT_COLUMNS = ["rally", "start_frame", "end_frame", "n_obs", "first", "fitted", "rms_px",
+                  "speed_kmh", "apex_m", "net_z_m", "land_x", "land_y"]
+
+
+def match_flights(cam: Camera3D, track: BallTrack, rallies, fps: float, noise_px: float = NOISE_PX) -> list[dict]:
+    """Every flight in every rally (frame intervals), fitted where possible."""
+    rows = []
+    for r, (s, e) in enumerate(rallies):
+        for i, (a, b) in enumerate(split_flights(track, s, e, fps)):
+            frames = a + np.flatnonzero(track.visible[a:b])
+            uv = np.stack([track.x[frames], track.y[frames]], axis=1)
+            fit = fit_flight(cam, frames, uv, fps, noise_px)
+            row = {"rally": r, "start_frame": a, "end_frame": b, "n_obs": len(frames), "first": i == 0,
+                   "fitted": fit is not None}
+            if fit is not None:
+                row["rms_px"] = fit.rms_px
+                row.update(flight_metrics(fit.p0, fit.v0, fit.end_frame - fit.start_frame, fps))
+            rows.append(row)
+    return rows
+
+
+def save_flights(path, rows: list[dict]) -> None:
+    import csv
+
+    with open(path, "w", newline="") as f:
+        writer = csv.DictWriter(f, FLIGHT_COLUMNS, lineterminator="\n")
+        writer.writeheader()
+        for row in rows:
+            writer.writerow({k: (round(v, 3) if isinstance(v, float) else v) for k, v in row.items()})
+
+
+def summary(rows: list[dict]) -> str:
+    fitted = [r for r in rows if r["fitted"]]
+    serves = [r for r in fitted if r["first"]]
+    lines = [f"flights {len(rows)}, fitted {len(fitted)} ({len(fitted) / max(1, len(rows)):.0%}); "
+             f"first flights fitted {len(serves)} of {sum(r['first'] for r in rows)}"]
+    if serves:
+        speed = np.array([r["speed_kmh"] for r in serves])
+        net = [r["net_z_m"] for r in serves if r["net_z_m"] is not None]
+        land = [(r["land_x"], r["land_y"]) for r in serves if r["land_x"] is not None]
+        near_court = sum(-2 <= x <= 11 and -2 <= y <= 20 for x, y in land)
+        lines.append(f"serve speed km/h: p10 {np.percentile(speed, 10):.0f} median {np.median(speed):.0f} "
+                     f"p90 {np.percentile(speed, 90):.0f} | in 40-100: {np.mean((speed >= 40) & (speed <= 100)):.0%}")
+        lines.append(f"serve net crossing: {len(net)} crossing, above 2.43 m: "
+                     f"{np.mean(np.array(net) > 2.43) if net else 0:.0%} | landings {len(land)}, "
+                     f"within 2 m of the court: {near_court / max(1, len(land)):.0%}")
+    return "\n".join(lines)

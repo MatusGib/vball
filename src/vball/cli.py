@@ -80,6 +80,19 @@ def build_parser() -> argparse.ArgumentParser:
     pe.add_argument("match_id", type=int)
     pe.add_argument("--players", type=Path)
 
+    c3 = sub.add_parser("camera", help="fit the 3D camera to the court calibration and report it")
+    c3.add_argument("match_id", type=int)
+
+    bs = sub.add_parser("ball3dsim", help="simulate flights through this match's camera; report 3D metric errors")
+    bs.add_argument("match_id", type=int)
+    bs.add_argument("--count", type=int, default=100)
+    bs.add_argument("--noise", type=float, nargs="+", default=[3.0, 6.0, 9.0])
+    bs.add_argument("--seed", type=int, default=0)
+
+    b3 = sub.add_parser("ball3d", help="fit 3D ball flights in every rally; writes flights.csv")
+    b3.add_argument("match_id", type=int)
+    b3.add_argument("--noise-px", type=float, default=6.0)
+
     s = sub.add_parser("serve", help="start the web app")
     s.add_argument("--port", type=int, default=8000)
     return parser
@@ -204,6 +217,43 @@ def main(argv: list[str] | None = None) -> int:
             else:
                 rallies = [(r["start_frame"], r["end_frame"]) for r in store.get_rallies(conn, args.match_id)]
             print(pl_mod.player_stats(players, cal, rallies).summary())
+
+        elif args.command in ("camera", "ball3dsim", "ball3d"):
+            from vball import ball3d, ball3d_sim  # scipy-heavy; imported only when needed
+            from vball.camera3d import fit_camera
+
+            if not paths.court_json(args.match_id).exists():
+                print("calibrate the court first (viewer: Calibrate court)", file=sys.stderr)
+                return 1
+            cam, err = fit_camera(load_calibration(paths.court_json(args.match_id)), match["width"], match["height"])
+            fps = match["fps"]
+            gt_path = paths.gt_csv(args.match_id)
+            if gt_path.exists():
+                rallies = [(round(l.start_s * fps), round(l.end_s * fps)) for l in load_labels(gt_path)]
+            else:
+                rallies = [(r["start_frame"], r["end_frame"]) for r in store.get_rallies(conn, args.match_id)]
+            if args.command == "camera":
+                n_floor = len(cam.cal.points)
+                x, y, z = cam.centre()
+                print(f"focal {cam.K[0, 0]:.0f} px | camera at x {x:.2f} y {y:.2f} z {z:.2f} m")
+                print(f"floor error mean {err[:n_floor].mean():.1f} px max {err[:n_floor].max():.1f} px "
+                      "(points clicked outside the picture are not used)")
+                if len(err) > n_floor:
+                    print(f"net error {', '.join(f'{e:.1f}' for e in err[n_floor:])} px")
+                else:
+                    print("no net clicks: height comes from the floor alone")
+            elif args.command == "ball3dsim":
+                track = load_tracknet_csv(paths.ball_csv(args.match_id), match["n_frames"])
+                rows = ball3d_sim.run_simulation(cam, track, rallies, fps, match["width"], match["height"],
+                                                 args.count, args.noise, args.seed)
+                for r in rows:
+                    print(" | ".join(f"{k} {v:.2f}" if isinstance(v, float) else f"{k} {v}" for k, v in r.items()))
+            else:
+                track = load_tracknet_csv(paths.ball_csv(args.match_id), match["n_frames"])
+                rows = ball3d.match_flights(cam, track, rallies, fps, args.noise_px)
+                ball3d.save_flights(paths.flights_csv(args.match_id), rows)
+                print(ball3d.summary(rows))
+                print(f"wrote {paths.flights_csv(args.match_id)}")
 
         elif args.command == "balleval":
             test_path = paths.ball_test_csv(args.match_id)

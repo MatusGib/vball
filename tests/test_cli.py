@@ -168,3 +168,9 @@ def test_playereval_needs_calibration(tmp_path, monkeypatch, capsys):
     save_players(default_paths().players_csv(match_id), [(0, 1, 0, 0, 10, 10, 0.9)])
     assert main(["playereval", str(match_id)]) == 1
     assert "calibrate the court" in capsys.readouterr().err
+
+
+def test_camera_needs_a_calibration(tmp_path, monkeypatch, capsys):
+    match_id = seed(tmp_path, monkeypatch)
+    assert main(["camera", str(match_id)]) == 1
+    assert "calibrate" in capsys.readouterr().err

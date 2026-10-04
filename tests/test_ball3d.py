@@ -2,7 +2,7 @@ import numpy as np
 from helpers import make_camera
 
 from vball.ball.track import BallTrack
-from vball.ball3d import G, fit_flight, flight_metrics, simulate, split_flights
+from vball.ball3d import G, fit_flight, flight_metrics, match_flights, save_flights, simulate, split_flights
 
 FPS = 30
 
@@ -72,3 +72,17 @@ def test_fit_rejects_a_path_no_ball_can_fly():
     a = np.linspace(0, 2 * np.pi, 30)
     uv = np.stack([960 + 200 * np.cos(a), 400 + 200 * np.sin(a)], axis=1)  # a circle
     assert fit_flight(cam, np.arange(30), uv, FPS) is None
+
+
+def test_match_flights_rows_and_csv(tmp_path):
+    cam = make_camera()
+    n = 120
+    _, uv = serve_observations(cam, n=30)
+    visible = np.zeros(n, dtype=bool)
+    x, y = np.full(n, np.nan), np.full(n, np.nan)
+    visible[10:40], x[10:40], y[10:40] = True, uv[:, 0], uv[:, 1]
+    rows = match_flights(cam, BallTrack(visible, x, y), [(0, n)], FPS)
+    assert len(rows) == 1 and rows[0]["fitted"] and rows[0]["first"] and rows[0]["start_frame"] == 10
+    assert abs(rows[0]["speed_kmh"] - np.linalg.norm([0.0, 22.0, 2.0]) * 3.6) < 1.5
+    save_flights(tmp_path / "flights.csv", rows)
+    assert (tmp_path / "flights.csv").read_text().splitlines()[0].startswith("rally,start_frame,end_frame")
