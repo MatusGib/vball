@@ -236,8 +236,12 @@ def main(argv: list[str] | None = None) -> int:
                 n_floor = len(cam.cal.points)
                 x, y, z = cam.centre()
                 print(f"focal {cam.K[0, 0]:.0f} px | camera at x {x:.2f} y {y:.2f} z {z:.2f} m")
-                print(f"floor error mean {err[:n_floor].mean():.1f} px max {err[:n_floor].max():.1f} px "
-                      "(points clicked outside the picture are not used)")
+                inside = [0 <= p["x"] < match["width"] and 0 <= p["y"] < match["height"] for p in cam.cal.points]
+                used = [e for e, ok in zip(err[:n_floor], inside) if ok]
+                print(f"floor error mean {sum(used) / len(used):.1f} px max {max(used):.1f} px over {len(used)} points")
+                off = [p["landmark"] for p, ok in zip(cam.cal.points, inside) if not ok]
+                if off:
+                    print(f"not used (clicked outside the picture): {', '.join(off)}")
                 if len(err) > n_floor:
                     print(f"net error {', '.join(f'{e:.1f}' for e in err[n_floor:])} px")
                 else:
