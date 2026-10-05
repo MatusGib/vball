@@ -533,6 +533,7 @@ async function loadFlights(id) {
   flightsProblem = null;
   try {
     const res = await fetch(`/api/matches/${id}/flights`);
+    if (id !== matchId) return; // another match was picked while this one loaded
     if (res.ok) {
       flights = await res.json();
     } else {

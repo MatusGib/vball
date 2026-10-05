@@ -56,6 +56,28 @@ fit: several far-side serves pin the start at the fit's limit (6 m behind the fa
 1.4 m net crossings; some "serves" are far-court passes whose wrong depth makes them cross the net plane; one is a
 0.3 s fragment.
 
+## Toss / serve splitting and limit rejection (2026-10-05)
+
+Investigation of the implausible serves: some fits are pinned to a parameter limit (Kent 1: 8 of 20 implausible
+vs 2 of 16 plausible; Kent 2: 4 of 15 vs 2 of 20), and the one-step touch test misses soft touches such as the
+hit at the top of a far-side toss (a 15–25 px change, about the tracker's jitter). A toss-like start (ball
+rising almost straight up) is *not* what separates bad from good serves: about half of both groups start that
+way. Kent 1 also repeats one frame in every 19 (5%, from the source file's conversion); Kent 2 has none.
+
+Changes: flights are additionally cut where two quadratics per image axis fit better than one cubic by more than
+30·σ² (recursive), and fits ending on a limit are rejected. First net-crossing flight as the serve:
+
+| Match | Before: serves / plausible | After: serves / plausible |
+|---|---|---|
+| Kent 1 | 36 / 16 (44%) | 33 / 18 (55%) |
+| Kent 2 | 35 / 20 (57%) | 38 / 26 (68%) |
+| Brunel away 3 | 40 / 22 (55%) | 39 / 22 (56%) |
+
+(gain 15 and 60 were within a few serves of 30.) Fitted flights per set: 236 / 267 / 392.
+
+**Viewer:** *Show speed* draws each fitted flight's arc and the ball's current speed and height, frame by frame
+(`GET /api/matches/{id}/flights`, built from `flights.csv` + the camera).
+
 ## Reading so far
 
 - **Serves (speed, net height, landing):** promising — accurate in simulation and plausible in ~2/3 of real serves.
@@ -67,5 +89,5 @@ fit: several far-side serves pin the start at the fit's limit (6 m behind the fa
 
 ## Next
 
-1. Reject fits that end on a bound; split the toss from the serve.
+1. Frame-timing correction for sources with duplicated frames (Kent 1); serve classification beyond "first net-crossing flight".
 2. If serves stay plausible: a landing check page (click where serves land) for real ground truth.
