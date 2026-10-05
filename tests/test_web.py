@@ -217,3 +217,30 @@ def test_court_calibration_accepts_net_points(tmp_path):
     body = res.json()
     assert len(body["points"]) == 4 and body["net_points"][0]["landmark"] == "net_left_top"
     assert body["segments"][0]["net_image"] == [[400.0, 300.0], None]
+
+
+def test_flights_endpoint_plays_back_fitted_flights(tmp_path):
+    from helpers import make_camera
+
+    from vball.ball.track import BallTrack
+    from vball.ball3d import match_flights, save_flights, simulate
+
+    client, match_id = make_client(tmp_path)
+    assert client.get(f"/api/matches/{match_id}/flights").json()["detail"] == "no 3D flights"
+    cam = make_camera(size=(1280, 720), f=930.0)
+    names = list(LANDMARKS)
+    image = cam.project_ref(np.array([(*LANDMARKS[n], 0.0) for n in names]))
+    client.put(f"/api/matches/{match_id}/court", json={"ref_frame": 0, "points": [
+        {"landmark": n, "x": float(x), "y": float(y)} for n, (x, y) in zip(names, image)]})
+    uv = cam.project_ref(simulate(np.array([4.5, -1.0, 2.8]), np.array([0.0, 22.0, 2.0]), 30, 30.0))
+    visible = np.zeros(900, dtype=bool)
+    x, y = np.full(900, np.nan), np.full(900, np.nan)
+    visible[100:130], x[100:130], y[100:130] = True, uv[:, 0], uv[:, 1]
+    save_flights(tmp_path / "data" / "matches" / str(match_id) / "flights.csv",
+                 match_flights(cam, BallTrack(visible, x, y), [(0, 900)], 30.0))
+    body = client.get(f"/api/matches/{match_id}/flights").json()
+    assert body["fps"] == 30.0 and len(body["flights"]) == 1
+    f = body["flights"][0]
+    assert f["start"] == 100 and f["end"] == 130 and abs(f["speed_kmh"][0] - 79.7) < 3
+    page = client.get("/").text
+    assert 'id="show-speed"' in page

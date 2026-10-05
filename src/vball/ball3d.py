@@ -69,12 +69,35 @@ def flight_metrics(p0, v0, n: int, fps: float, extend_s: float = 0.5, k: float =
     return m
 
 
+def _sse(t: np.ndarray, v: np.ndarray, deg: int) -> float:
+    return float(((np.polyval(np.polyfit(t, v, deg), t) - v) ** 2).sum())
+
+
+def _refine(track: BallTrack, frames: np.ndarray, gain: float, noise_px: float, min_side: int = 6) -> list:
+    """Cut where two quadratics (per image axis) fit much better than one cubic, recursively: touches too soft for
+    the one-step test, like the hit at the top of a serve toss (docs/results/phase2d-ball3d.md)."""
+    if len(frames) < 2 * min_side:
+        return [frames]
+    t, x, y = frames - frames[0], track.x[frames], track.y[frames]
+    single = _sse(t, x, 3) + _sse(t, y, 3)
+    best, k_best = np.inf, 0
+    for k in range(min_side, len(frames) - min_side + 1):
+        two = _sse(t[:k], x[:k], 2) + _sse(t[:k], y[:k], 2) + _sse(t[k:], x[k:], 2) + _sse(t[k:], y[k:], 2)
+        if two < best:
+            best, k_best = two, k
+    if single - best < gain * noise_px**2:
+        return [frames]
+    return _refine(track, frames[:k_best], gain, noise_px) + _refine(track, frames[k_best:], gain, noise_px)
+
+
 def split_flights(
     track: BallTrack, start: int, end: int, fps: float,
     max_gap_s: float = 0.5, jump_px: float = 25.0, min_obs: int = 8, window: int = 6,
+    split_gain: float = 30.0, noise_px: float = NOISE_PX,
 ) -> list[tuple[int, int]]:
-    """Cut a rally's visible ball positions into flights: at gaps over max_gap_s, and where a quadratic through
-    the last `window` points misses the next point by more than jump_px (a touch). Returns (first, last + 1)."""
+    """Cut a rally's visible ball positions into flights: at gaps over max_gap_s, where a quadratic through the
+    last `window` points misses the next point by more than jump_px (a touch), then by _refine. Returns
+    (first, last + 1)."""
     pieces, cur = [], []
     for f in (start + np.flatnonzero(track.visible[start:end])).tolist():
         if cur and f - cur[-1] > max_gap_s * fps:
@@ -89,7 +112,8 @@ def split_flights(
                 cur = []
         cur.append(f)
     pieces.append(cur)
-    return [(p[0], p[-1] + 1) for p in pieces if len(p) >= min_obs]
+    refined = [r for p in pieces if p for r in _refine(track, np.array(p), split_gain, noise_px)]
+    return [(int(p[0]), int(p[-1]) + 1) for p in refined if len(p) >= min_obs]
 
 
 @dataclass
@@ -164,6 +188,8 @@ def fit_flight(cam: Camera3D, frames, uv, fps: float, noise_px: float = NOISE_PX
         _drag_residuals, best.x, jac=_drag_jacobian, bounds=(LOWER, UPPER), loss="soft_l1", f_scale=noise_px,
         args=(cam, idx, int(idx[-1]) + 1, fps, uv_ref),
     )
+    if np.any(np.isclose(res.x, LOWER, atol=0.05) | np.isclose(res.x, UPPER, atol=0.05)):
+        return None  # pinned to a limit: the data did not decide the arc
     err = np.linalg.norm(res.fun.reshape(-1, 2), axis=1)
     inliers = err <= 3 * noise_px
     if inliers.mean() < 0.8:
@@ -172,8 +198,9 @@ def fit_flight(cam: Camera3D, frames, uv, fps: float, noise_px: float = NOISE_PX
                   float(np.sqrt(np.mean(err[inliers] ** 2))), float(inliers.mean()))
 
 
+STATE_COLUMNS = ["p0_x", "p0_y", "p0_z", "v0_x", "v0_y", "v0_z"]  # fitted state at start_frame's first sighting
 FLIGHT_COLUMNS = ["rally", "start_frame", "end_frame", "n_obs", "first", "fitted", "rms_px",
-                  "speed_kmh", "apex_m", "net_z_m", "land_x", "land_y"]
+                  "speed_kmh", "apex_m", "net_z_m", "land_x", "land_y", *STATE_COLUMNS]
 
 
 def match_flights(cam: Camera3D, track: BallTrack, rallies, fps: float, noise_px: float = NOISE_PX) -> list[dict]:
@@ -189,6 +216,7 @@ def match_flights(cam: Camera3D, track: BallTrack, rallies, fps: float, noise_px
             if fit is not None:
                 row["rms_px"] = fit.rms_px
                 row.update(flight_metrics(fit.p0, fit.v0, fit.end_frame - fit.start_frame, fps))
+                row.update(zip(STATE_COLUMNS, [*fit.p0.tolist(), *fit.v0.tolist()]))
             rows.append(row)
     return rows
 
@@ -199,6 +227,37 @@ def save_flights(path, rows: list[dict]) -> None:
         writer.writeheader()
         for row in rows:
             writer.writerow({k: (round(v, 3) if isinstance(v, float) else v) for k, v in row.items()})
+
+
+def load_flights(path) -> list[dict]:
+    rows = []
+    with open(path, newline="") as f:
+        for r in csv.DictReader(f):
+            row = {}
+            for k, v in r.items():
+                if k in ("first", "fitted"):
+                    row[k] = v == "True"
+                elif k in ("rally", "start_frame", "end_frame", "n_obs"):
+                    row[k] = int(v)
+                else:
+                    row[k] = float(v) if v else None
+            rows.append(row)
+    return rows
+
+
+def flight_track(cam: Camera3D, row: dict, fps: float) -> dict:
+    """A fitted flight frame by frame for the viewer: image position, speed (km/h) and height (m)."""
+    n = row["end_frame"] - row["start_frame"]
+    state = [row[k] for k in STATE_COLUMNS]
+    pos, vel = simulate(state[:3], state[3:], n, fps, return_velocity=True)
+    uv = np.vstack([cam.project(pos[i : i + 1], row["start_frame"] + i) for i in range(n)])
+    return {
+        "start": row["start_frame"], "end": row["end_frame"], "rally": row["rally"], "first": row["first"],
+        "uv": np.round(uv, 1).tolist(),
+        "speed_kmh": np.round(np.linalg.norm(vel, axis=1) * 3.6, 1).tolist(),
+        "z_m": np.round(pos[:, 2], 2).tolist(),
+        "net_z_m": row["net_z_m"],
+    }
 
 
 def summary(rows: list[dict]) -> str:

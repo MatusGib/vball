@@ -15,6 +15,8 @@ from vball.ball.testset import BallTestItem, load_ball_test, sample_test_frames,
 from vball.camera import camera_segments
 from vball.court import LANDMARKS, NET_LANDMARKS, Calibration, calibration_json, load_calibration, save_calibration
 from vball.ball.track import load_tracknet_csv
+from vball.ball3d import flight_track, load_flights
+from vball.camera3d import fit_camera
 from vball.config import Paths
 from vball.labels import Label, load_labels, save_labels
 from vball.players import load_players, with_court
@@ -195,6 +197,27 @@ def create_app(paths: Paths) -> FastAPI:
                     row["side"] = int(side[i])
             rows.append(row)
         return rows
+
+    flight_cache: dict[int, tuple] = {}  # match id -> ((flights mtime, court mtime), response)
+
+    @app.get("/api/matches/{match_id}/flights")
+    def get_flights(match_id: int, conn: sqlite3.Connection = Depends(db)) -> dict:
+        match = require_match(conn, match_id)
+        csv_path, court_path = paths.flights_csv(match_id), paths.court_json(match_id)
+        if not csv_path.exists():
+            raise HTTPException(status_code=404, detail="no 3D flights")
+        if not court_path.exists():
+            raise HTTPException(status_code=404, detail="court not calibrated")
+        key = (csv_path.stat().st_mtime, court_path.stat().st_mtime)
+        cached = flight_cache.get(match_id)
+        if cached is None or cached[0] != key:
+            rows = [r for r in load_flights(csv_path) if r["fitted"] and r.get("p0_x") is not None]
+            if not rows:
+                raise HTTPException(status_code=404, detail="flights.csv has no 3D states; re-run vball ball3d")
+            cam, _ = fit_camera(load_calibration(court_path), match["width"], match["height"])
+            body = {"fps": match["fps"], "flights": [flight_track(cam, r, match["fps"]) for r in rows]}
+            flight_cache[match_id] = (key, body)
+        return flight_cache[match_id][1]
 
     @app.get("/api/matches/{match_id}/frames/{frame}.jpg")
     def get_frame(match_id: int, frame: int, conn: sqlite3.Connection = Depends(db)) -> Response:

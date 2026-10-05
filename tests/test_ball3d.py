@@ -2,7 +2,7 @@ import numpy as np
 from helpers import make_camera
 
 from vball.ball.track import BallTrack
-from vball.ball3d import G, fit_flight, flight_metrics, match_flights, save_flights, simulate, split_flights
+from vball.ball3d import G, fit_flight, flight_metrics, flight_track, load_flights, match_flights, save_flights, simulate, split_flights
 
 FPS = 30
 
@@ -86,3 +86,39 @@ def test_match_flights_rows_and_csv(tmp_path):
     assert abs(rows[0]["speed_kmh"] - np.linalg.norm([0.0, 22.0, 2.0]) * 3.6) < 1.5
     save_flights(tmp_path / "flights.csv", rows)
     assert (tmp_path / "flights.csv").read_text().splitlines()[0].startswith("rally,start_frame,end_frame")
+
+
+def test_flights_round_trip_with_their_3d_state_and_play_back(tmp_path):
+    cam = make_camera()
+    n = 120
+    _, uv = serve_observations(cam, n=30)
+    visible = np.zeros(n, dtype=bool)
+    x, y = np.full(n, np.nan), np.full(n, np.nan)
+    visible[10:40], x[10:40], y[10:40] = True, uv[:, 0], uv[:, 1]
+    save_flights(tmp_path / "flights.csv", match_flights(cam, BallTrack(visible, x, y), [(0, n)], FPS))
+    rows = load_flights(tmp_path / "flights.csv")
+    assert rows[0]["fitted"] is True and rows[0]["start_frame"] == 10 and abs(rows[0]["p0_y"] + 1.0) < 0.1
+    track = flight_track(cam, rows[0], FPS)
+    assert track["start"] == 10 and track["end"] == 40 and len(track["uv"]) == len(track["speed_kmh"]) == 30
+    assert np.allclose(track["uv"][0], uv[0], atol=2.0)
+    assert track["speed_kmh"][-1] < track["speed_kmh"][0]  # drag slows it down
+    assert abs(track["z_m"][0] - 2.8) < 0.1
+
+
+def test_split_finds_a_soft_touch_like_the_hit_after_a_toss():
+    n = 60
+    visible = np.zeros(n, dtype=bool)
+    x, y = np.full(n, np.nan), np.full(n, np.nan)
+    t = np.arange(0, 12)  # toss: straight up, slowing
+    x[t], y[t] = 500.0, 400 - 11 * t + 0.3 * t**2
+    h = np.arange(12, 42)  # hit at the top: off to the left, rising then dropping towards the camera for 1 s
+    x[h], y[h] = 500 - 10 * (h - 11), y[11] - 6 * (h - 11) + 0.9 * (h - 11) ** 2  # misses the one-step test by 10 px
+    visible[:42] = True
+    pieces = split_flights(BallTrack(visible, x, y), 0, n, FPS)
+    assert len(pieces) == 2 and abs(pieces[1][0] - 12) <= 1
+
+
+def test_fit_pinned_to_a_limit_is_rejected():
+    cam = make_camera()
+    frames, uv = serve_observations(cam, p0=(4.5, 27.0, 3.0), v0=(0.0, -20.0, 1.0))  # starts beyond the y limit
+    assert fit_flight(cam, frames, uv, FPS) is None

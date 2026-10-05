@@ -51,6 +51,7 @@ async function selectMatch(id) {
   video.src = `/media/${id}/work.mp4`;
   loadBall(id);
   loadCourt(id);
+  loadFlights(id);
   playerChunks = new Map();
   playersMissing = false;
   calib = null;
@@ -476,6 +477,7 @@ function drawOverlay(mediaTime = video.currentTime) {
   const frame = Math.round(mediaTime * matchFps);
   drawCourt(ctx, frame, r);
   drawPlayers(ctx, frame, r);
+  drawSpeed(ctx, frame, r);
   if (!$("#show-ball").checked || !ballData) return;
   const s = (r.scale * (video.videoWidth || ballData.width)) / ballData.width;
   for (let k = 8; k >= 0; k--) {
@@ -518,6 +520,74 @@ video.addEventListener("loadedmetadata", () => drawOverlay());
 window.addEventListener("resize", () => drawOverlay());
 $("#show-ball").onchange = () => {
   if ($("#show-ball").checked && ballProblem) say(ballProblem, "warn");
+  drawOverlay();
+};
+
+// ---------- 3D ball flights: speed overlay ----------
+
+let flights = null; // GET /flights response: {fps, flights: [{start, end, uv, speed_kmh, z_m, ...}]}
+let flightsProblem = null; // why there are no flights, shown when "Show speed" is ticked
+
+async function loadFlights(id) {
+  flights = null;
+  flightsProblem = null;
+  try {
+    const res = await fetch(`/api/matches/${id}/flights`);
+    if (res.ok) {
+      flights = await res.json();
+    } else {
+      const detail = (await res.json().catch(() => ({}))).detail;
+      flightsProblem =
+        detail === "no 3D flights"
+          ? `No 3D ball flights for this match yet: run "uv run vball ball3d ${id}".`
+          : detail === "court not calibrated"
+            ? "Calibrate the court first, then run vball ball3d on this match."
+            : detail && res.status === 404 && detail !== "Not Found"
+              ? detail
+              : `The server can't provide 3D flights (HTTP ${res.status}); restart it with "uv run vball serve".`;
+    }
+  } catch (err) {
+    flightsProblem = `Couldn't load 3D flights: ${err.message}`;
+  }
+  if ($("#show-speed").checked && flightsProblem) say(flightsProblem, "warn");
+  drawOverlay();
+}
+
+function flightAt(frame) {
+  return flights ? flights.flights.find((f) => frame >= f.start && frame < f.end) : null;
+}
+
+function drawSpeed(ctx, frame, r) {
+  if (!$("#show-speed").checked) return;
+  const f = flightAt(frame);
+  if (!f) return;
+  const px = ([x, y]) => [r.x + x * r.scale, r.y + y * r.scale];
+  ctx.strokeStyle = "rgba(250, 204, 21, 0.75)";
+  ctx.lineWidth = 2;
+  ctx.setLineDash([6, 4]);
+  ctx.beginPath();
+  f.uv.forEach((p, j) => (j ? ctx.lineTo(...px(p)) : ctx.moveTo(...px(p))));
+  ctx.stroke();
+  ctx.setLineDash([]);
+  const i = frame - f.start;
+  const [bx, by] = px(f.uv[i]);
+  ctx.fillStyle = "#facc15";
+  ctx.beginPath();
+  ctx.arc(bx, by, 5, 0, 2 * Math.PI);
+  ctx.fill();
+  const label = `${Math.round(f.speed_kmh[i])} km/h · ${f.z_m[i].toFixed(1)} m`;
+  ctx.font = "bold 15px system-ui";
+  const w = ctx.measureText(label).width + 12;
+  const lx = Math.min(bx + 14, overlay.clientWidth - w - 4);
+  const ly = Math.max(by - 34, 4);
+  ctx.fillStyle = "rgba(0, 0, 0, 0.72)";
+  ctx.fillRect(lx, ly, w, 22);
+  ctx.fillStyle = "#facc15";
+  ctx.fillText(label, lx + 6, ly + 16);
+}
+
+$("#show-speed").onchange = () => {
+  if ($("#show-speed").checked && flightsProblem) say(flightsProblem, "warn");
   drawOverlay();
 };
 
