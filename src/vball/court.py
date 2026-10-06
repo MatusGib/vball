@@ -77,6 +77,7 @@ class Calibration:
     segments: list[Segment] = field(default_factory=list)
     net_points: list[dict] = field(default_factory=list)  # NET_LANDMARKS clicked at ref_frame
     net_height_m: float = NET_HEIGHT_M
+    copied_from: int | None = None  # a draft carried over from another set's calibration (vball courtcopy)
 
     @classmethod
     def create(cls, ref_frame: int, points: list[dict], segments: list[Segment]) -> "Calibration":
@@ -103,6 +104,17 @@ class Calibration:
         return self.image_to_court @ np.linalg.inv(self.segment_at(frame).ref_to_frame)
 
 
+def shifted_copy(
+    cal: Calibration, shift: tuple[float, float], ref_frame: int, segments: list[Segment], copied_from: int
+) -> Calibration:
+    """Another set's calibration moved by a picture shift (same tripod spot, camera turned slightly): a draft."""
+    dx, dy = shift
+    moved = [{**p, "x": p["x"] + dx, "y": p["y"] + dy} for p in cal.points + cal.net_points]
+    new = Calibration.create(ref_frame, moved, segments)
+    new.net_height_m, new.copied_from = cal.net_height_m, copied_from
+    return new
+
+
 def save_calibration(path: Path, cal: Calibration) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     data = {
@@ -115,6 +127,7 @@ def save_calibration(path: Path, cal: Calibration) -> None:
         ],
         "net_points": cal.net_points,
         "net_height_m": cal.net_height_m,
+        "copied_from": cal.copied_from,
     }
     path.write_text(json.dumps(data, indent=1), encoding="utf-8")
 
@@ -124,7 +137,7 @@ def load_calibration(path: Path) -> Calibration:
     segments = [Segment(s["start_frame"], s["end_frame"], np.array(s["ref_to_frame"])) for s in data["segments"]]
     return Calibration(
         data["ref_frame"], data["points"], np.array(data["image_to_court"]), segments,
-        data.get("net_points", []), data.get("net_height_m", NET_HEIGHT_M),
+        data.get("net_points", []), data.get("net_height_m", NET_HEIGHT_M), data.get("copied_from"),
     )
 
 
@@ -160,4 +173,5 @@ def calibration_json(cal: Calibration) -> dict:
         "net_points": cal.net_points,
         "net_height_m": cal.net_height_m,
         "net_landmarks": NET_LANDMARKS,
+        "copied_from": cal.copied_from,
     }

@@ -31,6 +31,23 @@ def estimate_shift(ref_gray: np.ndarray, gray: np.ndarray, window: np.ndarray) -
     return np.array([[1.0, 0.0, dx], [0.0, 1.0, dy], [0.0, 0.0, 1.0]])
 
 
+def read_gray(video: Path, frame: int) -> np.ndarray | None:
+    cap = cv2.VideoCapture(str(video))
+    cap.set(cv2.CAP_PROP_POS_FRAMES, frame)
+    ok, image = cap.read()
+    cap.release()
+    return cv2.cvtColor(image, cv2.COLOR_BGR2GRAY) if ok else None
+
+
+def image_shift(a_gray: np.ndarray, b_gray: np.ndarray) -> tuple[float, float, float]:
+    """How far picture b is moved relative to a (dx, dy in pixels) and the phase-correlation response."""
+    h, w = a_gray.shape
+    (dx, dy), response = cv2.phaseCorrelate(
+        np.float32(a_gray), np.float32(b_gray), cv2.createHanningWindow((w, h), cv2.CV_32F)
+    )
+    return float(dx), float(dy), float(response)
+
+
 def split_segments(
     samples: list[tuple[int, np.ndarray]], n_frames: int, width: int, height: int, threshold_px: float = 10.0
 ) -> list[Segment]:

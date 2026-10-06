@@ -62,3 +62,13 @@ def test_persistent_move_opens_a_segment_with_median_transform():
     segments = split_segments(samples, n_frames=3000, width=1920, height=1080, threshold_px=6.0)
     assert [(s.start_frame, s.end_frame) for s in segments] == [(0, 1200), (1200, 3000)]
     assert abs(segments[1].ref_to_frame[0, 2] - 119) < 1e-9
+
+
+def test_image_shift_between_two_pictures():
+    from vball.camera import image_shift
+
+    rng = np.random.default_rng(0)
+    a = cv2.GaussianBlur(rng.uniform(0, 255, (288, 512)).astype(np.float32), (7, 7), 2)
+    b = np.roll(a, (8, -16), axis=(0, 1))  # picture moved 16 px left, 8 px down
+    dx, dy, response = image_shift(a, b)
+    assert abs(dx + 16) < 0.5 and abs(dy - 8) < 0.5 and response > 0.3

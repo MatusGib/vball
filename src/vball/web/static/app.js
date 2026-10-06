@@ -619,6 +619,8 @@ async function loadCourt(id) {
   } catch {
     court = null; // not calibrated yet
   }
+  if (court?.copied_from && id === matchId)
+    say(`This set's court is a draft copied from set #${court.copied_from}: open Calibrate court to check and save it.`, "warn");
   drawOverlay();
 }
 
@@ -757,10 +759,22 @@ function renderCalib() {
   LANDMARK_ORDER.forEach((name, i) => {
     const li = document.createElement("li");
     const done = calib.points.find((p) => p.landmark === name);
-    li.textContent = `${name.replaceAll("_", " ")}${done ? " ✓" : ""}`;
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "calib-pick";
+    btn.textContent = `${name.replaceAll("_", " ")}${done ? " ✓" : ""}`;
+    btn.title = done ? "Click, then click the video to move this point" : "Click, then click this point on the video";
+    btn.onclick = () => {
+      calib.index = i;
+      renderCalib();
+    };
     if (i === calib.index) li.className = "active";
+    li.appendChild(btn);
     list.appendChild(li);
   });
+  $("#calib-draft").hidden = !(court && court.copied_from && calib.frame === court.ref_frame);
+  if (court && court.copied_from)
+    $("#calib-draft").textContent = `Draft copied from set #${court.copied_from}: check every point with the magnifier. Click a landmark in the list to move it, then Save.`;
   $("#calib-save").disabled = calib.points.filter((p) => !p.landmark.startsWith("net_")).length < 4;
   drawOverlay();
 }
@@ -789,7 +803,9 @@ function startCalibration() {
 overlay.addEventListener("click", (e) => {
   if (!calib || calib.index >= LANDMARK_ORDER.length) return;
   const p = videoPoint(e);
-  calib.points.push({ landmark: LANDMARK_ORDER[calib.index], x: p.x, y: p.y });
+  const name = LANDMARK_ORDER[calib.index];
+  calib.points = calib.points.filter((q) => q.landmark !== name); // re-clicking a landmark moves it
+  calib.points.push({ landmark: name, x: p.x, y: p.y });
   calib.index = nextMissing(calib.index + 1);
   renderCalib();
   drawLoupe(p);

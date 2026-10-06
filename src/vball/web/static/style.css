@@ -121,3 +121,7 @@ main.stats { display: block; max-width: 1180px; margin: 0 auto; }
 .heat-box canvas { display: block; border-radius: 6px; }
 .heat-tip { position: absolute; z-index: 2; white-space: nowrap; pointer-events: none; padding: 4px 8px; border-radius: 6px; background: var(--fg); color: var(--bg); font-size: 12px; }
 #side-numbers { display: grid; gap: 12px; min-width: 240px; }
+
+.calib-pick { all: unset; cursor: pointer; display: block; width: 100%; }
+.calib-pick:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.draft-note { margin: 4px 0 8px; padding: 6px 10px; border-radius: 6px; background: var(--warn-bg); color: var(--warn); }

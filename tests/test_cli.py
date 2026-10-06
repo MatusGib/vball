@@ -174,3 +174,9 @@ def test_camera_needs_a_calibration(tmp_path, monkeypatch, capsys):
     match_id = seed(tmp_path, monkeypatch)
     assert main(["camera", str(match_id)]) == 1
     assert "calibrate" in capsys.readouterr().err
+
+
+def test_courtcopy_needs_a_calibrated_source(tmp_path, monkeypatch, capsys):
+    match_id = seed(tmp_path, monkeypatch)
+    assert main(["courtcopy", str(match_id), str(match_id)]) == 1
+    assert "calibrate" in capsys.readouterr().err

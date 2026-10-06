@@ -90,3 +90,18 @@ def test_calibration_without_net_points(tmp_path):
     cal = load_calibration(tmp_path / "court.json")
     assert cal.net_points == [] and cal.net_height_m == 2.43
     assert calibration_json(cal)["segments"][0]["net_image"] == [None, None]
+
+
+def test_shifted_copy_moves_every_point_and_is_marked_as_a_draft(tmp_path):
+    from vball.court import shifted_copy
+
+    points, image, court = floor_points(["far_left_corner", "far_right_corner", "center_left", "center_right"])
+    src = Calibration.create(5, points + NET, [])
+    assert src.copied_from is None
+    cal = shifted_copy(src, (40.0, -10.0), ref_frame=300, segments=[Segment(0, 1000, np.eye(3))], copied_from=1)
+    assert cal.copied_from == 1 and cal.ref_frame == 300
+    assert np.allclose(apply_h(cal.image_to_court, image + [40.0, -10.0]), court, atol=1e-6)
+    assert cal.net_points[0]["x"] == NET[0]["x"] + 40.0 and cal.net_points[0]["y"] == NET[0]["y"] - 10.0
+    save_calibration(tmp_path / "court.json", cal)
+    again = load_calibration(tmp_path / "court.json")
+    assert again.copied_from == 1 and calibration_json(again)["copied_from"] == 1

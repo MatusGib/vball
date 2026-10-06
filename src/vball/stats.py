@@ -124,6 +124,8 @@ def match_stats(paths: Paths, conn: sqlite3.Connection, match_id: int) -> dict:
     }
     if paths.flights_csv(match_id).exists():
         out["flights"] = classify_flights(load_flights(paths.flights_csv(match_id)), match["fps"])
+    elif paths.court_json(match_id).exists() and load_calibration(paths.court_json(match_id)).copied_from:
+        out["missing"]["flights"] = "the court is a draft: check and save it in the viewer (Calibrate court) first"
     elif not paths.court_json(match_id).exists():
         out["missing"]["flights"] = f"calibrate the court (with the net clicks), then run: uv run vball ball3d {match_id}"
     else:

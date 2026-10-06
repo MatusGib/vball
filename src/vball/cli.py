@@ -80,6 +80,11 @@ def build_parser() -> argparse.ArgumentParser:
     pe.add_argument("match_id", type=int)
     pe.add_argument("--players", type=Path)
 
+    cc = sub.add_parser("courtcopy", help="draft a court calibration from another set filmed from the same spot")
+    cc.add_argument("src", type=int, help="calibrated set to copy from")
+    cc.add_argument("dst", type=int, help="set to draft a calibration for")
+    cc.add_argument("--force", action="store_true", help="replace an existing calibration")
+
     c3 = sub.add_parser("camera", help="fit the 3D camera to the court calibration and report it")
     c3.add_argument("match_id", type=int)
 
@@ -142,6 +147,48 @@ def main(argv: list[str] | None = None) -> int:
             build_cache(sources, cache, n_windows=args.windows)
         ft.finetune(cache, args.init, args.out, epochs=args.epochs, batch_size=args.batch_size)
         print(f"wrote {args.out}")
+        return 0
+
+    if args.command == "courtcopy":
+        import numpy as np
+
+        from vball.camera import MIN_RESPONSE, camera_segments, image_shift, read_gray
+        from vball.court import save_calibration, shifted_copy
+
+        conn = store.connect(paths.db_path)
+        try:
+            src, dst = store.get_match(conn, args.src), store.get_match(conn, args.dst)
+        finally:
+            conn.close()
+        if src is None or dst is None:
+            print("no such match", file=sys.stderr)
+            return 1
+        if not paths.court_json(args.src).exists():
+            print(f"calibrate #{args.src} first (viewer: Calibrate court)", file=sys.stderr)
+            return 1
+        if paths.court_json(args.dst).exists() and not args.force:
+            print(f"#{args.dst} is already calibrated; add --force to replace it", file=sys.stderr)
+            return 1
+        cal = load_calibration(paths.court_json(args.src))
+        ref = read_gray(paths.track_video(args.src), cal.ref_frame)
+        scale = dst["width"] / 512
+        samples = []  # (frame, dx, dy, response) in work-video pixels
+        for frac in (0.15, 0.3, 0.45, 0.6, 0.75, 0.9):
+            frame = int(dst["n_frames"] * frac)
+            dx, dy, response = image_shift(ref, read_gray(paths.track_video(args.dst), frame))
+            if response >= MIN_RESPONSE:
+                samples.append((frame, dx * scale, dy * scale, response))
+        median = np.median([s[1:3] for s in samples], axis=0) if samples else None
+        agree = [s for s in samples if np.hypot(s[1] - median[0], s[2] - median[1]) <= 10] if samples else []
+        if len(agree) < 3:
+            print(f"#{args.src} and #{args.dst} don't line up reliably ({len(agree)} of 6 samples agree): "
+                  "calibrate this set by hand", file=sys.stderr)
+            return 1
+        frame, dx, dy, _ = max(agree, key=lambda s: s[3])
+        segments = camera_segments(paths.track_video(args.dst), frame, dst["n_frames"], scale)
+        save_calibration(paths.court_json(args.dst), shifted_copy(cal, (dx, dy), frame, segments, args.src))
+        print(f"draft court for #{args.dst} from #{args.src}: picture shift {dx:+.0f}, {dy:+.0f} px "
+              f"({len(agree)} of 6 samples agree), {len(segments)} camera segment(s). Check it in the viewer.")
         return 0
 
     if args.command == "tunerallies":
