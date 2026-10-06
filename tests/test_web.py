@@ -244,3 +244,39 @@ def test_flights_endpoint_plays_back_fitted_flights(tmp_path):
     assert f["start"] == 100 and f["end"] == 130 and abs(f["speed_kmh"][0] - 79.7) < 3
     page = client.get("/").text
     assert 'id="show-speed"' in page
+
+
+def test_stats_without_flights_says_what_to_run(tmp_path):
+    client, match_id = make_client(tmp_path)
+    body = client.get("/api/stats").json()
+    m = body["matches"][0]
+    assert m["rallies"]["count"] == 2 and m["rallies"]["source"] == "detected"
+    assert "vball ball3d" in m["missing"]["flights"] and body["leaderboards"]["serves"] == []
+
+
+def test_meta_sets_our_side(tmp_path):
+    client, match_id = make_client(tmp_path)
+    assert client.put(f"/api/matches/{match_id}/meta", json={"our_side": "middle"}).status_code == 422
+    assert client.put(f"/api/matches/{match_id}/meta", json={"our_side": "near"}).json() == {"our_side": "near"}
+    assert client.get(f"/api/matches/{match_id}/stats").json()["our_side"] == "near"
+
+
+def test_match_stats_include_side_level_players(tmp_path):
+    from vball.players import save_players
+
+    client, match_id = make_client(tmp_path)
+    assert "vball players" in client.get(f"/api/matches/{match_id}/stats").json()["missing"]["players"]
+    names = ["far_left_corner", "far_right_corner", "center_left", "center_right"]
+    client.put(f"/api/matches/{match_id}/court", json={"ref_frame": 0, "points": court_points(names)})
+    fx, fy = apply_h(COURT_TO_IMAGE, [[4.5, 15.0]])[0]
+    save_players(tmp_path / "data" / "matches" / str(match_id) / "players.csv",
+                 [(f, 4, fx - 20, fy - 120, fx + 20, fy, 0.9) for f in range(40, 100)])
+    p = client.get(f"/api/matches/{match_id}/stats").json()["players"]
+    assert p["far"]["players_per_frame"] > 0 and p["near"]["players_per_frame"] == 0
+    assert abs(p["far"]["mean_net_distance_m"] - 6.0) < 0.05
+
+
+def test_stats_page_is_served_and_linked(tmp_path):
+    client, _ = make_client(tmp_path)
+    assert 'id="stats-root"' in client.get("/stats.html").text
+    assert 'href="/stats.html"' in client.get("/").text

@@ -10,7 +10,7 @@ from fastapi import Depends, FastAPI, HTTPException, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from vball import store
+from vball import stats, store
 from vball.ball.testset import BallTestItem, load_ball_test, sample_test_frames, save_ball_test
 from vball.camera import camera_segments
 from vball.court import LANDMARKS, NET_LANDMARKS, Calibration, calibration_json, load_calibration, save_calibration
@@ -40,6 +40,10 @@ class CourtPoint(BaseModel):
     landmark: str
     x: float
     y: float
+
+
+class MetaBody(BaseModel):
+    our_side: Literal["near", "far"] | None = None
 
 
 class CourtBody(BaseModel):
@@ -218,6 +222,37 @@ def create_app(paths: Paths) -> FastAPI:
             body = {"fps": match["fps"], "flights": [flight_track(cam, r, match["fps"]) for r in rows]}
             flight_cache[match_id] = (key, body)
         return flight_cache[match_id][1]
+
+    @app.get("/api/stats")
+    def get_all_stats(conn: sqlite3.Connection = Depends(db)) -> dict:
+        all_stats = [stats.match_stats(paths, conn, m["id"]) for m in store.list_matches(conn)]
+        return {"matches": all_stats, "leaderboards": stats.leaderboards(all_stats)}
+
+    player_stats_cache: dict[int, tuple] = {}  # match id -> (key, player stats)
+
+    @app.get("/api/matches/{match_id}/stats")
+    def get_match_stats(match_id: int, conn: sqlite3.Connection = Depends(db)) -> dict:
+        match = require_match(conn, match_id)
+        body = stats.match_stats(paths, conn, match_id)
+        csv_path, court_path = paths.players_csv(match_id), paths.court_json(match_id)
+        if not csv_path.exists():
+            body["missing"]["players"] = f"no player tracks: run uv run vball players {match_id}"
+        elif not court_path.exists():
+            body["missing"]["players"] = "calibrate the court first (viewer: Calibrate court)"
+        else:
+            intervals, _ = stats.rally_intervals(paths, conn, match_id)
+            key = (csv_path.stat().st_mtime, court_path.stat().st_mtime, tuple(intervals))
+            cached = player_stats_cache.get(match_id)
+            if cached is None or cached[0] != key:
+                player_stats_cache[match_id] = (key, stats.match_player_stats(paths, match_id, intervals, match["fps"]))
+            body["players"] = player_stats_cache[match_id][1]
+        return body
+
+    @app.put("/api/matches/{match_id}/meta")
+    def put_meta(match_id: int, body: MetaBody, conn: sqlite3.Connection = Depends(db)) -> dict:
+        require_match(conn, match_id)
+        stats.save_meta(paths.meta_json(match_id), {"our_side": body.our_side})
+        return stats.load_meta(paths.meta_json(match_id))
 
     @app.get("/api/matches/{match_id}/frames/{frame}.jpg")
     def get_frame(match_id: int, frame: int, conn: sqlite3.Connection = Depends(db)) -> Response:
