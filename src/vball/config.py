@@ -57,6 +57,10 @@ class Paths:
         """3D ball flights (vball ball3d)."""
         return self.match_dir(match_id) / "flights.csv"
 
+    def meta_json(self, match_id: int) -> Path:
+        """Per-match settings, e.g. which end our team plays (stats page)."""
+        return self.match_dir(match_id) / "meta.json"
+
     @property
     def ball_train_dir(self) -> Path:
         return self.data_dir / "ball_train"
