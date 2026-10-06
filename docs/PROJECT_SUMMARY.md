@@ -2,7 +2,7 @@
 
 A personal clone of Balltime's "Volleyball AI": turn a phone recording of an indoor volleyball match into rally clips, tagged touches and player stats. This page explains what exists, why it was built this way, and what the measurements show. Details live in the linked documents.
 
-Last updated: 2026-10-03.
+Last updated: 2026-10-06.
 
 ## Where things stand
 
@@ -11,10 +11,12 @@ Last updated: 2026-10-03.
 | 1 | Rally cutting: ingest, ball tracking, rally detection, viewer, export | Done, merged |
 | 2a | Better ball tracker (fine-tuned on our own footage) | Done, merged |
 | 2b part 1 | Ball overlay in the viewer, external ball models, ball v2 | Done (branch `phase2b`) |
-| 2b part 2 | Court calibration, player detection + tracking | Next |
+| 2b part 2 | Court + net calibration (with magnifier), player detection + tracking (YOLO11 chosen), opt-in serve check | Done (branch `phase2b`); players being run on all sets |
+| 2d | 3D ball flights from one camera: speed, height, net crossing, landing; *Show speed* overlay | Experiment: serves and sets usable, attacks rough ([phase2d-ball3d.md](results/phase2d-ball3d.md)) |
+| Stats | Stats page: hardest serves, highest sets, fastest attacks (experimental), longest rallies, side heat maps; rows open the viewer at the moment | Done (branch `phase2b`) |
 | 2c | Touch detection and action tagging (serve, pass, set, attack, block, dig) | Planned |
 | 3 | Team and player identity (jersey numbers), per-player stats | Planned |
-| 4 | Ball metrics (speed, height), heat maps, quality grades | Planned |
+| 4 | Per-player metrics, quality grades | Planned (ball metrics and side heat maps started in 2d / Stats) |
 
 Data processed: 11 sets from 3 matches (Kent, Brunel home, Brunel away), 4.4 hours of video, 491 rallies detected. 97 automated tests.
 
