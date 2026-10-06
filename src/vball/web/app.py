@@ -8,7 +8,7 @@ import cv2
 import numpy as np
 from fastapi import Depends, FastAPI, HTTPException, Response
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from vball import stats, store
 from vball.ball.testset import BallTestItem, load_ball_test, sample_test_frames, save_ball_test
@@ -47,12 +47,18 @@ class ServeFix(BaseModel):
     outcome: Literal["ace", "error", "in"] | None = None
 
 
+class RealScore(BaseModel):
+    us: int = Field(ge=0, le=99)
+    them: int = Field(ge=0, le=99)
+
+
 class MetaBody(BaseModel):
     """Only the fields sent are changed."""
 
     our_side: Literal["near", "far"] | None = None
     lineup: list[str] | None = None
     serve_fix: dict[str, ServeFix] | None = None
+    real_score: RealScore | None = None  # the set's final score as the owner knows it
 
 
 class CourtBody(BaseModel):

@@ -3,7 +3,7 @@ import json
 import numpy as np
 
 from vball.court import Calibration, LANDMARKS, Segment, apply_h
-from vball.players import Players, load_players, player_stats, ravel_to_csv, save_players, with_court
+from vball.players import Players, feet_to_court, load_players, player_stats, ravel_to_csv, save_players, with_court
 
 COURT_TO_IMAGE = np.array([[110.0, -20.0, 465.0], [0.0, -25.0, 1000.0], [0.0, 0.035, 1.0]])
 
@@ -18,6 +18,14 @@ def calibration():
 def box_at(court_xy, half_width=20, height=120):
     fx, fy = apply_h(COURT_TO_IMAGE, [court_xy])[0]
     return (fx - half_width, fy - height, fx + half_width, fy)
+
+
+def test_feet_above_the_floor_horizon_have_no_court_position():
+    # COURT_TO_IMAGE's horizon (court y -> infinity) is at image y = -25 / 0.035 = -714 px; a spectator on a balcony
+    # whose feet are above it would otherwise map behind the camera, i.e. "behind the near baseline"
+    rows = [(0, 1, *box_at((4.5, 3.0)), 0.9), (0, 2, 445.0, -920.0, 485.0, -800.0, 0.9)]
+    xy = feet_to_court(np.array([0, 0]), Players.from_rows(rows).box, calibration())
+    assert np.allclose(xy[0], [4.5, 3.0], atol=1e-6) and np.isnan(xy[1]).all()
 
 
 def test_round_trip(tmp_path):

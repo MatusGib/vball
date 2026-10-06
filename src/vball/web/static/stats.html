@@ -30,7 +30,16 @@
         <span class="help">Who won each rally comes from who served the next one; fix a serve in the viewer with <kbd>V</kbd> (other end served) and <kbd>O</kbd> (ace, error, in).</span>
       </div>
       <div class="serving-body">
-        <div class="board"><table id="serving-teams"></table></div>
+        <div class="board">
+          <table id="serving-teams"></table>
+          <form id="real-form" class="lineup" hidden>
+            <label for="real-us">Real final score (from your score sheet): us</label>
+            <input id="real-us" type="number" min="0" max="99" class="score-in"> <span>–</span>
+            <input id="real-them" type="number" min="0" max="99" class="score-in" aria-label="them">
+            <span>them</span>
+            <button class="small" type="submit">Save score</button>
+          </form>
+        </div>
         <div id="servers" class="board" hidden>
           <h3>Our servers</h3>
           <form id="lineup-form" class="lineup">

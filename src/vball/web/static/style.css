@@ -227,6 +227,8 @@ main.stats > section { margin-bottom: 16px; }
 .serving h3 { margin: 12px 0 6px; font: 700 15px var(--display); letter-spacing: 0.04em; text-transform: uppercase; }
 .lineup { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin-bottom: 6px; color: var(--on-kit-soft); }
 .lineup input { min-width: 16ch; flex: 1; border-color: var(--kit-line); }
+.lineup input.score-in { min-width: 0; width: 6ch; flex: none; }
+#real-form { margin-top: 8px; }
 .board td.team-near:first-child { color: var(--near); width: auto; }
 .board td.team-far:first-child { color: var(--far); width: auto; }
 .serving-notes { margin: 0; padding: 0 16px 12px 34px; color: var(--on-kit-soft); }
@@ -276,6 +278,22 @@ main.stats > section { margin-bottom: 16px; }
 .entry .meta { color: var(--on-kit-soft); font-size: 12px; margin-top: 3px; }
 .entry .use b { color: var(--on-kit-soft); font-weight: 600; }
 @media (max-width: 900px) { .entry { grid-template-columns: 1fr; } }
+.entry .work { grid-column: 1 / -1; margin-top: 4px; border-left: 3px solid var(--court); padding: 2px 0 2px 12px; }
+.entry .work summary { cursor: pointer; font: 700 13px var(--ui); color: var(--on-kit-soft); letter-spacing: 0.03em; text-transform: uppercase; }
+.work-item { padding: 8px 0 4px; border-bottom: 1px dashed var(--kit-3); }
+.work-item:last-child { border-bottom: 0; }
+.work-item p { margin: 2px 0; max-width: 110ch; }
+.work-head { font-weight: 700; }
+.work-head time { color: var(--on-kit-soft); font: 600 12px var(--ui); margin-right: 6px; }
+.work-doc { color: var(--on-kit-soft); font-size: 12px; }
+.work-table { overflow-x: auto; margin: 6px 0; }
+.work-table table { border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.work-table th, .work-table td { padding: 4px 12px 4px 0; text-align: left; border-bottom: 1px solid var(--kit-2); white-space: nowrap; }
+.work-table th { color: var(--on-kit-soft); font: 600 11px var(--ui); letter-spacing: 0.04em; text-transform: uppercase; }
+.work-item figure { margin: 6px 0 2px; }
+.work-item img { display: block; max-width: min(100%, 960px); border-radius: 2px; }
+.work-item figcaption { color: var(--on-kit-soft); font-size: 12px; margin-top: 3px; }
+.src-status.src-needs-you { background: var(--next); color: #23170c; }
 .src-status { display: inline-block; margin-top: 6px; font: 700 11px var(--ui); letter-spacing: 0.04em; text-transform: uppercase; padding: 2px 7px; border-radius: 2px; background: var(--kit-3); color: var(--on-kit-soft); }
 .src-used { background: rgba(63, 191, 116, 0.16); color: var(--paint-green); }
 .src-tested { background: rgba(59, 130, 246, 0.18); color: #8db8fb; }

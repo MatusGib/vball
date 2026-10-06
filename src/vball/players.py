@@ -9,7 +9,7 @@ from pathlib import Path
 import numpy as np
 
 from vball.config import MODELS_DIR
-from vball.court import NET_Y, Calibration, Segment, apply_h
+from vball.court import COURT_WIDTH, NET_Y, Calibration, Segment, apply_h
 
 COLUMNS = ["frame", "track_id", "x1", "y1", "x2", "y2", "score"]
 ON_COURT_X = (-1.5, 10.5)  # metres, sidelines plus a margin
@@ -99,8 +99,17 @@ def team_sides(track_id: np.ndarray, side: np.ndarray, on_court: np.ndarray) -> 
     return team[inverse], player[inverse]
 
 
+def _below_horizon(H: np.ndarray, pts: np.ndarray) -> np.ndarray:
+    """Image points on the floor's side of its horizon: their homogeneous scale under the image -> court homography
+    has the sign of the court centre's. Points past the horizon (feet on a balcony or a far wall) map behind the camera."""
+    centre = np.linalg.solve(H, [COURT_WIDTH / 2, NET_Y, 1.0])
+    ref = H[2] @ (centre / centre[2])
+    return np.sign(np.hstack([pts, np.ones((len(pts), 1))]) @ H[2]) == np.sign(ref)
+
+
 def feet_to_court(frame: np.ndarray, box: np.ndarray, cal: Calibration) -> np.ndarray:
-    """Court (x, y) in metres of the bottom-centre of each box (feet), using the camera segment of its frame."""
+    """Court (x, y) in metres of the bottom-centre of each box (feet), using the camera segment of its frame; NaN for
+    feet above the floor's horizon."""
     feet = np.stack([(box[:, 0] + box[:, 2]) / 2, box[:, 3]], axis=1)
     court_xy = np.zeros_like(feet)
     segments = cal.segments or [Segment(0, 1 << 62, np.eye(3))]
@@ -110,7 +119,8 @@ def feet_to_court(frame: np.ndarray, box: np.ndarray, cal: Calibration) -> np.nd
         end = np.inf if i == len(segments) - 1 else seg.end_frame
         rows = (frame >= start) & (frame < end)
         if rows.any():
-            court_xy[rows] = apply_h(cal.image_to_court @ np.linalg.inv(seg.ref_to_frame), feet[rows])
+            H = cal.image_to_court @ np.linalg.inv(seg.ref_to_frame)
+            court_xy[rows] = np.where(_below_horizon(H, feet[rows])[:, None], apply_h(H, feet[rows]), np.nan)
     return court_xy
 
 

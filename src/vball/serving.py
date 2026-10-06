@@ -14,7 +14,9 @@ from vball.serve import ServeParams, _inside, _leaves, reach_box
 BEFORE_S, AFTER_S = 1.0, 1.5  # look for the server from rally start - this to rally start + this
 BEHIND_M = 0.3  # feet this far behind a baseline
 SIDE_M = 1.5  # feet within the sidelines +- this
-ON_SERVE_S, PLAYED_S = 2.5, 4.5  # rally end this soon after the serve: ended on it; this late: the serve was played
+# rally end this soon after the serve: ended on it; this late: the serve was played. On Kent 1 the owner's 8 aces /
+# errors ended 2.1-3.4 s after the serve and the 32 played serves 4.2 s or later (docs/results/phase2e)
+ON_SERVE_S, PLAYED_S = 3.6, 4.0
 ACTION_FROM_S, ACTION_TO_S = 0.4, 3.5  # action detector window after the serve
 RECEIVE_FROM_S = 0.5  # a receive this soon after the serve is the server's own swing
 RECEIVE_CONF = 0.4

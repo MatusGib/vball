@@ -266,7 +266,9 @@ def test_meta_changes_only_the_fields_sent(tmp_path):
     url = f"/api/matches/{match_id}/meta"
     client.put(url, json={"our_side": "far"})
     meta = client.put(url, json={"lineup": [" 14", "", "25 "], "serve_fix": {"1.0": {"end": "near"}, "15.0": {}}}).json()
-    assert meta == {"our_side": "far", "lineup": ["14", "25"], "serve_fix": {"1.0": {"end": "near"}}}
+    assert meta == {"our_side": "far", "lineup": ["14", "25"], "serve_fix": {"1.0": {"end": "near"}}, "real_score": None}
+    assert client.put(url, json={"real_score": {"us": 26, "them": 24}}).json()["real_score"] == {"us": 26, "them": 24}
+    assert client.put(url, json={"real_score": {"us": -1, "them": 24}}).status_code == 422
     assert client.put(url, json={"serve_fix": {"1.0": {"outcome": "bad"}}}).status_code == 422
 
 

@@ -18,7 +18,7 @@ HEAT_X = (-2.0, 11.0)  # metres, 1 m cells: 13 columns
 HEAT_Y = (-4.0, 22.0)  # 26 rows
 
 
-META_DEFAULTS = {"our_side": None, "lineup": [], "serve_fix": {}}
+META_DEFAULTS = {"our_side": None, "lineup": [], "serve_fix": {}, "real_score": None}
 
 
 def load_meta(path: Path) -> dict:
@@ -144,7 +144,7 @@ def match_serving(paths: Paths, conn: sqlite3.Connection, match_id: int) -> tupl
     return {
         "source": source, "rallies": rallies, "summary": serving.team_summary(rallies),
         "players": serving.player_serves(rallies, speeds), "lineup": meta["lineup"], "our_side": meta["our_side"],
-        "serve_fix": meta["serve_fix"],
+        "serve_fix": meta["serve_fix"], "real_score": meta["real_score"],
     }, None
 
 

@@ -44,8 +44,8 @@ def test_winner_is_the_next_server_and_short_rallies_are_aces_or_errors():
         rally(0, 2.0, "near"),  # near serves again next: ace
         rally(10, 2.0, "near"),  # far serves next: serve error
         rally(20, 8.0, "far"),  # long: in
-        rally(30, 3.5, "far"),  # middle band, no receive seen: check
-        rally(40, 3.5, "near", defense_far=True),  # middle band, the far end received it: in
+        rally(30, 3.8, "far"),  # middle band, no receive seen: check
+        rally(40, 3.8, "near", defense_far=True),  # middle band, the far end received it: in
         rally(50, 9.0, "near"),
     ])
     assert [r["winner"] for r in rows[:5]] == ["near", "far", "far", "near", "near"]

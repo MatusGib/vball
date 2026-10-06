@@ -168,6 +168,7 @@ function renderServing(matches) {
         .join("") +
       "</tbody>";
     renderServers(one);
+    renderReal(one, notes);
     if (one.serving.source !== "labels")
       notes.push(`<li class="warn">These rallies are detected, not labelled: a false rally adds a point. Approve the labels in the viewer for a true score.</li>`);
     const todo = servingDetail?.id === one.id
@@ -202,6 +203,39 @@ function renderServing(matches) {
   }
   $("#serving-notes").innerHTML = notes.join("");
 }
+
+// the owner's real final score next to the inferred one: how far off the serving ends and the rallies are
+function renderReal(m, notes) {
+  $("#real-form").hidden = !m.our_side;
+  if (!m.our_side) return;
+  const real = m.serving.real_score;
+  for (const [id, k] of [["#real-us", "us"], ["#real-them", "them"]])
+    if (document.activeElement !== $(id)) $(id).value = real ? real[k] : "";
+  if (!real || !m.serving.score) return;
+  const us = m.serving.score[m.our_side];
+  const them = m.serving.score[OTHER[m.our_side]];
+  const played = real.us + real.them;
+  const rallies = m.serving.summary.near.serves + m.serving.summary.far.serves + m.serving.summary.unknown_end;
+  const off = Math.abs(us - real.us) + Math.abs(them - real.them);
+  const gap = played - rallies;
+  notes.unshift(
+    `<li class="${off ? "warn" : ""}">Real score ${real.us}–${real.them}, vball's ${us}–${them}` +
+      (off ? ` (${off} point${off > 1 ? "s" : ""} off)` : " (exact)") +
+      `. ${played} points were played and ${rallies} rallies are ${m.serving.source === "labels" ? "labelled" : "detected"}` +
+      (gap > 0 ? `: ${gap} missing, so the score can't be exact until they are labelled.` : gap < 0 ? `: ${-gap} too many (false rallies).` : ".") +
+      "</li>",
+  );
+}
+
+$("#real-form").onsubmit = async (e) => {
+  e.preventDefault();
+  const m = picked();
+  const us = $("#real-us").value, them = $("#real-them").value;
+  const body = us === "" || them === "" ? { real_score: null } : { real_score: { us: Number(us), them: Number(them) } };
+  await getJson(`/api/matches/${m.id}/meta`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  document.activeElement.blur();
+  await refreshMatch(m.id);
+};
 
 function renderServers(m) {
   $("#servers").hidden = !m.our_side;
