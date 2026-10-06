@@ -180,3 +180,15 @@ def test_courtcopy_needs_a_calibrated_source(tmp_path, monkeypatch, capsys):
     match_id = seed(tmp_path, monkeypatch)
     assert main(["courtcopy", str(match_id), str(match_id)]) == 1
     assert "calibrate" in capsys.readouterr().err
+
+
+def test_ball3d_uses_the_wasb_track_when_it_exists(tmp_path):
+    from vball.cli import ball3d_track_path
+    from vball.config import Paths
+
+    paths = Paths(tmp_path)
+    paths.match_dir(1).mkdir(parents=True)
+    assert ball3d_track_path(paths, 1, "auto") == paths.ball_csv(1)
+    paths.ball_wasb_csv(1).write_text("Frame,Visibility,X,Y\n")
+    assert ball3d_track_path(paths, 1, "auto") == paths.ball_wasb_csv(1)
+    assert ball3d_track_path(paths, 1, "ours") == paths.ball_csv(1)

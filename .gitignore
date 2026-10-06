@@ -6,3 +6,7 @@ __pycache__/
 data/
 models/
 third_party/yolov7/
+third_party/WASB-SBDT/
+third_party/spot/
+third_party/T-DEED/
+third_party/spot_run.py

@@ -8,7 +8,15 @@ from vball.ball.metrics import ball_metrics, tolerance_px
 from vball.ball.testset import load_ball_test
 from vball.ball.track import load_tracknet_csv
 from vball.ball.tracknet import run_tracknet
-from vball.config import ACTIONS_WEIGHTS, BASE_TRACKNET_WEIGHTS, TRACKNET_THRESHOLD, TRACKNET_WEIGHTS, default_paths
+from vball.config import (
+    ACTIONS_WEIGHTS,
+    BASE_TRACKNET_WEIGHTS,
+    TRACKNET_THRESHOLD,
+    TRACKNET_WEIGHTS,
+    WASB_WEIGHTS,
+    Paths,
+    default_paths,
+)
 from vball.court import load_calibration
 from vball.serve import ServeParams
 from vball.evaluate import rally_metrics, restrict_to_span, visible_fraction
@@ -16,6 +24,15 @@ from vball.export import export_rallies
 from vball.labels import load_labels
 from vball.rallies import RallyParams
 from vball.tuning import GRID, SERVE_GRID, TuneCase, grid_search
+
+
+def ball3d_track_path(paths: Paths, match_id: int, choice: str) -> Path:
+    """WASB tracks the ball inside rallies more precisely (more fitted, more plausible flights; docs/results/phase2e),
+    so 3D flights use it whenever vball wasb has been run, unless --ball ours."""
+    wasb = paths.ball_wasb_csv(match_id)
+    if choice == "wasb" or (choice == "auto" and wasb.exists()):
+        return wasb
+    return paths.ball_csv(match_id)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -94,8 +111,13 @@ def build_parser() -> argparse.ArgumentParser:
     bs.add_argument("--noise", type=float, nargs="+", default=[3.0, 6.0, 9.0])
     bs.add_argument("--seed", type=int, default=0)
 
+    wb = sub.add_parser("wasb", help="track the ball with WASB (for 3D flights); writes ball_wasb.csv")
+    wb.add_argument("match_id", type=int)
+
     b3 = sub.add_parser("ball3d", help="fit 3D ball flights in every rally; writes flights.csv")
     b3.add_argument("match_id", type=int)
+    b3.add_argument("--ball", choices=["auto", "wasb", "ours"], default="auto",
+                    help="ball track for the flights: WASB's ball_wasb.csv when it exists (auto), or ball.csv")
     b3.add_argument("--noise-px", type=float, default=6.0)
 
     sv = sub.add_parser("serving", help="which end served each rally (+ receive check); writes serving.csv")
@@ -272,6 +294,16 @@ def main(argv: list[str] | None = None) -> int:
                 rallies = [(r["start_frame"], r["end_frame"]) for r in store.get_rallies(conn, args.match_id)]
             print(pl_mod.player_stats(players, cal, rallies).summary())
 
+        elif args.command == "wasb":
+            from vball.ball.wasb import run_wasb
+
+            if not WASB_WEIGHTS.exists():
+                print(f"no WASB weights at {WASB_WEIGHTS}; see third_party/wasb/VENDORED.md", file=sys.stderr)
+                return 1
+            n = run_wasb(paths.track_video(args.match_id), paths.ball_wasb_csv(args.match_id), match["width"],
+                         match["height"], WASB_WEIGHTS)
+            print(f"{n} frames; wrote {paths.ball_wasb_csv(args.match_id)}")
+
         elif args.command == "serving":
             from vball import serving
             from vball.stats import rally_intervals
@@ -363,7 +395,9 @@ def main(argv: list[str] | None = None) -> int:
                 for r in rows:
                     print(" | ".join(f"{k} {v:.2f}" if isinstance(v, float) else f"{k} {v}" for k, v in r.items()))
             else:
-                track = load_tracknet_csv(paths.ball_csv(args.match_id), match["n_frames"])
+                ball_path = ball3d_track_path(paths, args.match_id, args.ball)
+                print(f"ball track: {ball_path.name}")
+                track = load_tracknet_csv(ball_path, match["n_frames"])
                 rows = ball3d.match_flights(cam, track, rallies, fps, args.noise_px)
                 ball3d.save_flights(paths.flights_csv(args.match_id), rows)
                 print(ball3d.summary(rows))
