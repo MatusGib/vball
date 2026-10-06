@@ -36,7 +36,18 @@ async function loadMatches() {
     sel.appendChild(opt);
   }
   sel.onchange = () => selectMatch(Number(sel.value));
-  if (matches.length) await selectMatch(matches[matches.length - 1].id);
+  // deep links from the Stats page: /?match=2&t=91.3&show=speed
+  const params = new URLSearchParams(location.search);
+  for (const name of (params.get("show") || "").split(",").filter(Boolean)) {
+    const box = $(`#show-${name}`);
+    if (box) box.checked = true;
+  }
+  const wanted = Number(params.get("match"));
+  const id = matchesById[wanted] ? wanted : matches.at(-1)?.id;
+  if (id == null) return;
+  const t = Number(params.get("t"));
+  if (params.has("t") && t >= 0) video.addEventListener("loadedmetadata", () => (video.currentTime = t), { once: true });
+  await selectMatch(id);
 }
 
 async function selectMatch(id) {

@@ -67,13 +67,15 @@ def classify_flights(rows: list[dict], fps: float) -> dict:
         from_net = abs(r["p0_y"] - NET_Y)
         if r["net_z_m"] is not None and r["rally"] not in served:
             served.add(r["rally"])
-            item["plausible"] = bool(40 <= r["speed_kmh"] <= 100 and r["net_z_m"] > 2.43 and _lands_near_court(r))
+            item["plausible"] = bool(
+                40 <= r["speed_kmh"] <= 100 and 2.43 < r["net_z_m"] <= 4.5 and _lands_near_court(r)
+            )
             serves.append(item)
         elif from_net <= 4 and r["v0_z"] > 0 and r["net_z_m"] is None:
-            item["plausible"] = bool(r["apex_m"] <= 8 and r["speed_kmh"] <= 40)
+            item["plausible"] = bool(r["p0_z"] <= 3.5 and r["apex_m"] <= 8 and r["speed_kmh"] <= 40)
             sets.append(item)
         elif from_net <= 3 and r["p0_z"] >= 2.3 and r["v0_z"] < 0 and r["net_z_m"] is not None:
-            item["plausible"] = bool(30 <= r["speed_kmh"] <= 130)
+            item["plausible"] = bool(r["p0_z"] <= 4.0 and 30 <= r["speed_kmh"] <= 130)
             attacks.append(item)
     return {"serves": serves, "sets": sets, "attacks": attacks}
 

@@ -9,9 +9,9 @@ so the number can be checked against the video.
 | Stat | From | Rule |
 |---|---|---|
 | Rallies | `gt_rallies.csv` if present (source "labels"), else detected rallies ("detected") | count, total rally time, dead-time share of the video, mean / median length, longest rallies |
-| Serves | `flights.csv` | per rally, the first fitted flight that crosses the net plane. *Plausible* if 40–100 km/h, net crossing > 2.43 m and, when it lands, within 2 m of the court. Only plausible serves enter leaderboards; the number left out is shown |
-| Sets | `flights.csv` | fitted, not the serve, starts within 4 m of the net, rising (v0 z > 0), does not cross the net. Plausible if apex ≤ 8 m and speed ≤ 40 km/h. Ranked by apex |
-| Attacks (experimental) | `flights.csv` | fitted, not the serve, starts within 3 m of the net and ≥ 2.3 m up, falling (v0 z < 0), crosses the net. Plausible if 30–130 km/h. Shown with an "experimental, ~13 km/h typical error" badge (simulation, `docs/results/phase2d-ball3d.md`) |
+| Serves | `flights.csv` | per rally, the first fitted flight that crosses the net plane. *Plausible* if 40–100 km/h, net crossing 2.43–4.5 m and, when it lands, within 2 m of the court. Only plausible serves enter leaderboards; the number left out is shown |
+| Sets | `flights.csv` | fitted, not the serve, starts within 4 m of the net, rising (v0 z > 0), does not cross the net. Plausible if it starts ≤ 3.5 m up, apex ≤ 8 m and speed ≤ 40 km/h. Ranked by apex |
+| Attacks (experimental) | `flights.csv` | fitted, not the serve, starts within 3 m of the net and ≥ 2.3 m up, falling (v0 z < 0), crosses the net. Plausible if hit ≤ 4 m up and 30–130 km/h. Shown with an "experimental, ~13 km/h typical error" badge (simulation, `docs/results/phase2d-ball3d.md`) |
 | Players (per side) | `players.csv` + `court.json` | rally frames only, on-court feet (`players.with_court`): mean players on court per side, mean distance from the net per side, heat map of foot positions in 1 m cells over x −2…11, y −4…22 |
 
 Side of a flight = near if it starts at y < 9 m, else far. A per-match `meta.json` (`{"our_side": "near" | "far" |

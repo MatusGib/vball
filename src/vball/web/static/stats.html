@@ -1,2 +1,67 @@
 <!doctype html>
-<main id="stats-root"></main>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>vball · Stats</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <header>
+    <h1><a href="/">vball</a> · Stats</h1>
+    <select id="pick" aria-label="Match"></select>
+    <a class="header-link" href="/">← Viewer</a>
+  </header>
+  <main id="stats-root" class="stats">
+    <p id="load-state" class="help">Loading…</p>
+    <section id="tiles" class="tiles" aria-label="Headline numbers"></section>
+
+    <section id="sides" hidden>
+      <div class="section-head">
+        <h2>Where each side plays</h2>
+        <div class="side-switch" role="group" aria-label="Which end is our team">
+          <span class="help">Our team is at the</span>
+          <button data-side="near" aria-pressed="false">near end</button>
+          <button data-side="far" aria-pressed="false">far end</button>
+          <button data-side="" aria-pressed="false">not set</button>
+        </div>
+      </div>
+      <p class="help">Player feet during rallies, 1 m squares, darker = more time there. Each side is scaled to its own busiest square. Near end at the bottom (camera end).</p>
+      <div class="heat-wrap">
+        <div class="heat-box">
+          <canvas id="heat" width="182" height="364" aria-label="Court heat map of player positions"></canvas>
+          <div id="heat-tip" class="heat-tip" hidden></div>
+        </div>
+        <div id="side-numbers"></div>
+      </div>
+    </section>
+
+    <section class="boards">
+      <div class="board">
+        <h2>Hardest serves</h2>
+        <table id="board-serves"></table>
+        <p id="serve-note" class="help"></p>
+      </div>
+      <div class="board">
+        <h2>Highest sets</h2>
+        <table id="board-sets"></table>
+      </div>
+      <div class="board">
+        <h2>Fastest attacks <span class="badge-exp" title="One camera behind the baseline sees attacks nearly head-on: in simulation the speed is typically 13 km/h off">experimental</span></h2>
+        <table id="board-attacks"></table>
+        <p class="help">Attack speeds from one camera are rough (typically ±13 km/h in simulation). Click a row to check it on the video.</p>
+      </div>
+      <div class="board">
+        <h2>Longest rallies</h2>
+        <table id="board-rallies"></table>
+      </div>
+    </section>
+
+    <section>
+      <h2>Missing data</h2>
+      <ul id="missing" class="help"></ul>
+    </section>
+  </main>
+  <script src="/stats.js"></script>
+</body>
+</html>

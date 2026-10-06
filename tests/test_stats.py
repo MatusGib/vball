@@ -60,3 +60,13 @@ def test_meta_defaults_and_round_trip(tmp_path):
     assert load_meta(tmp_path / "meta.json") == {"our_side": None}
     save_meta(tmp_path / "meta.json", {"our_side": "far"})
     assert load_meta(tmp_path / "meta.json") == {"our_side": "far"}
+
+
+def test_physically_impossible_flights_are_not_plausible():
+    rows = [
+        flight(0, 30, (4, -1, 2.8), (0, 25, 3), 90.0, 5.0, 4.7, (4, 14)),  # 90 km/h serve 2.3 m over the tape
+        flight(0, 60, (5, 7, 5.8), (0, 0.5, 0.5), 6.0, 5.9, None),  # "set" starting 5.8 m up
+        flight(0, 90, (4, 8, 4.6), (0, 20, -4), 75.0, 4.6, 3.0, (4, 12)),  # "attack" hit 4.6 m up
+    ]
+    c = classify_flights(rows, fps=30.0)
+    assert [x["plausible"] for k in ("serves", "sets", "attacks") for x in c[k]] == [False, False, False]
