@@ -11,14 +11,16 @@ Last updated: 2026-10-06.
 | 1 | Rally cutting: ingest, ball tracking, rally detection, viewer, export | Done, merged |
 | 2a | Better ball tracker (fine-tuned on our own footage) | Done, merged |
 | 2b part 1 | Ball overlay in the viewer, external ball models, ball v2 | Done (branch `phase2b`) |
-| 2b part 2 | Court + net calibration (with magnifier), player detection + tracking (YOLO11 chosen), opt-in serve check | Done (branch `phase2b`); players being run on all sets |
+| 2b part 2 | Court + net calibration (with magnifier), player detection + tracking (YOLO11 chosen), opt-in serve check | Done (branch `phase2b`); players on all 11 sets |
 | 2d | 3D ball flights from one camera: speed, height, net crossing, landing; *Show speed* overlay | Experiment: serves and sets usable, attacks rough ([phase2d-ball3d.md](results/phase2d-ball3d.md)) |
 | Stats | Stats page: hardest serves, highest sets, fastest attacks (experimental), longest rallies, side heat maps; rows open the viewer at the moment | Done (branch `phase2b`) |
+| UI | Hall Floor redesign (light + dark), Sources page | Done (branch `phase2b`) |
+| Score | Serving end per rally → rally winner, score, side-out %, aces / serve errors (owner's rule), per-player serves from the serving order; viewer keys V / O to fix | Done (branch `phase2b`); feasibility in [phase2e](results/phase2e-player-stats-feasibility.md) |
 | 2c | Touch detection and action tagging (serve, pass, set, attack, block, dig) | Planned |
 | 3 | Team and player identity (jersey numbers), per-player stats | Planned |
 | 4 | Per-player metrics, quality grades | Planned (ball metrics and side heat maps started in 2d / Stats) |
 
-Data processed: 11 sets from 3 matches (Kent, Brunel home, Brunel away), 4.4 hours of video, 491 rallies detected. 97 automated tests.
+Data processed: 11 sets from 3 matches (Kent, Brunel home, Brunel away), 4.4 hours of video, 491 rallies detected. 175 automated tests.
 
 ## The setup and the constraints that shaped it
 
@@ -90,7 +92,10 @@ From [references/external_data.md](references/external_data.md):
 | TrackNetV3 (vendored, 3 small patches) | MIT | Ball tracker architecture |
 | deadfast beach-volley-vision weights | MIT | Starting weights |
 | VballNet dataset (29k hand-labelled ball frames, indoor amateur) | not stated, personal use | Training ball v2 |
-| fast-volleyball-tracking-inference (VballNet ONNX models, RAVEL-VB) | MIT | Ball benchmark; RAVEL-VB is a player-detector candidate for 2b |
+| fast-volleyball-tracking-inference (VballNet ONNX models, RAVEL-VB) | MIT | Ball benchmark; RAVEL-VB tested for players, not chosen |
+| Ultralytics YOLO11 + ByteTrack | AGPL-3.0 | Player detection and tracking |
+| VolleyVision YOLOv8m action detector | AGPL-3.0 (README: CC BY-NC-ND) | Did the receivers play the serve (`vball serving`) |
+| VREN rally notation | not stated | Reference rates: 16% of points are serve errors, 5% aces |
 
 Not usable: Court-Keypoint-Detection (no weights, data or licence); single-image Roboflow ball sets (the tracker needs consecutive frames). Broadcast-view action datasets are kept for phase 2c.
 
@@ -102,9 +107,11 @@ Not usable: Court-Keypoint-Detection (no weights, data or licence); single-image
 - Fine-tuned model files are not in git (130 MB limit); rebuild commands are in `src/vball/config.py` and the README.
 - The web server must be restarted after backend changes; the viewer now says so when it can't load data.
 
-## Next: phase 2b part 2
+## Next
 
-Court calibration (click ≥ 4 court points once per set; camera bumps corrected automatically) and player detection + tracking (YOLO11 + ByteTrack vs RAVEL-VB, compared without labelling), with court lines, player boxes and a mini court map in the viewer. Plan: [2026-10-03-phase2b2-court-players.md](superpowers/plans/2026-10-03-phase2b2-court-players.md).
+Per-player stats beyond serves need to know who touched the ball: jersey numbers on the near side look readable
+(phase 3), touch attribution at flight splits (passform's rule), and fewer player id switches (SportsMOT, needs the
+owner's CodaLab sign-up). Serve-outcome checks and approved rallies for the detected sets make the scores exact.
 
 ## Document map
 

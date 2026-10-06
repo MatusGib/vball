@@ -501,7 +501,9 @@ function renderServe() {
   const score = us
     ? `us ${r[`score_${us}`]} – ${r[`score_${OTHER_END[us]}`]} them`
     : `near ${r.score_near} – ${r.score_far} far`;
-  const outcome = `<span class="${r.outcome === "check" ? "check" : ""}">${OUTCOME_TEXT[r.outcome]}</span>`;
+  // most serves still to check end the rally (VREN: 16% of points are serve errors, 5% aces), so suggest one
+  const likely = r.outcome === "check" && r.end && r.winner ? ` (likely ${r.winner === r.end ? "ace" : "error"}: O)` : "";
+  const outcome = `<span class="${r.outcome === "check" ? "check" : ""}">${OUTCOME_TEXT[r.outcome]}${likely}</span>`;
   const fixed = (on) => (on ? ` <span class="fixed" title="set by you">✓</span>` : "");
   const by = r.server ? ` by <b>${r.server.replace(/[&<>"]/g, (c) => `&#${c.charCodeAt(0)};`)}</b>` : "";
   const speed = r.speed_kmh ? ` · ${Math.round(r.speed_kmh)} km/h` : "";

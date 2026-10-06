@@ -76,11 +76,11 @@
       "name": "VolleyVision (Roboflow sets)",
       "area": "Players",
       "kind": "datasets",
-      "licence": "CC BY-NC-ND (README)",
-      "status": "not tried",
+      "licence": "AGPL-3.0 (repo LICENSE; README says CC BY-NC-ND)",
+      "status": "used",
       "link": "https://github.com/shukkkur/VolleyVision",
       "what": "Player, ball, action and court-segmentation image sets, mostly from other camera angles.",
-      "use": "Read 2026-10-06: its YOLOv8m action detector (block, defence, serve, set, spike; 52 MB weights on GitHub, no Roboflow key needed) is the most promising unused piece for per-player stats, since an action box names the action and the player together. Untested on our back view."
+      "use": "Its YOLOv8m action detector (models/volleyvision/actions_yv8m.pt) checks whether the receivers played each serve (vball serving). It sees the far team, facing the camera, far better than the near team's backs."
     },
     {
       "name": "ddecks beach-volley-vision",
@@ -167,10 +167,10 @@
       "area": "Actions",
       "kind": "dataset",
       "licence": "check",
-      "status": "not tried",
+      "status": "used",
       "link": "https://github.com/haotianxia/VREN",
       "what": "Rally notation (actions and locations) for pro and NCAA matches.",
-      "use": "Read 2026-10-06: a 136 KB CSV of rally notation (locations, pass rating, set and hit type, blockers, win and lose reason). Priors for the touch sequence and stat definitions, not vision training data."
+      "use": "Downloaded (data/external/vren). Reference rates from its 1,498 points: 16% end in a serve error, 5% in an ace, so a 45-point set should have about 7 serve errors and 2 aces. Used to judge vball's serve outcomes and to suggest ace / error for serves still to check."
     },
     {
       "name": "openvolley pydatavolley / ovscout2",
