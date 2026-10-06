@@ -12,7 +12,8 @@ from vball.players import Players
 from vball.serve import ServeParams, _inside, _leaves, reach_box
 
 BEFORE_S, AFTER_S = 1.0, 1.5  # look for the server from rally start - this to rally start + this
-BEHIND_M = 0.3  # feet this far behind a baseline
+BEHIND_M = 0.3  # feet this far behind a baseline ...
+ZONE_M = 9.0  # ... and no farther: benches, walls and spectators beyond the far court are not servers
 SIDE_M = 1.5  # feet within the sidelines +- this
 # rally end this soon after the serve: ended on it; this late: the serve was played. On Kent 1 the owner's 8 aces /
 # errors ended 2.1-3.4 s after the serve and the 32 played serves 4.2 s or later (docs/results/phase2e)
@@ -21,9 +22,36 @@ ACTION_FROM_S, ACTION_TO_S = 0.4, 3.5  # action detector window after the serve
 RECEIVE_FROM_S = 0.5  # a receive this soon after the serve is the server's own swing
 RECEIVE_CONF = 0.4
 FIX_MATCH_S = 0.5
+# Cameras under LOW_CAMERA_M (Brunel away, ~0.5 m) squeeze the far court into a few pixel rows and jump servers'
+# feet map to the far end, so there the ball decides first: a near serve is first seen well above the net tape
+# (close to the camera), a far serve near it. Eye-checked: Brunel away 3 28/30; Kent (1.5 m) 19/36, so high cameras
+# keep the players.
+LOW_CAMERA_M = 1.0
+BALL_ABOVE_TAPE_PX = 200
 OUTCOMES = ("ace", "error", "in")
 COLUMNS = ["start_s", "end_s", "end", "how", "serve_s", "defense_near", "defense_far"]
 ACTION_COLUMNS = ["frame", "action", "conf", "x1", "y1", "x2", "y2", "court_x", "court_y"]
+
+
+def standing_row(i: int, players: Players, fps: float) -> int:
+    """The row with the lowest feet among this person's boxes in the second before frame players.frame[i] (same place
+    across, similar height): where a jump server stood. In the air his feet are near camera height, which the floor
+    mapping puts at the far end on a low camera."""
+    c, box = int(players.frame[i]), players.box[i]
+    w, h, cx = box[2] - box[0], box[3] - box[1], (box[0] + box[2]) / 2
+    a, b = np.searchsorted(players.frame, [c - round(1.0 * fps), c + 1])
+    bx = players.box[a:b]
+    same = (np.abs((bx[:, 0] + bx[:, 2]) / 2 - cx) < 0.75 * w) & ((bx[:, 3] - bx[:, 1]) > 0.6 * h) & ((bx[:, 3] - bx[:, 1]) < 1.6 * h)
+    rows = a + np.flatnonzero(same)
+    return int(rows[np.argmax(players.box[rows, 3])]) if len(rows) else i
+
+
+def behind(y: float) -> str | None:
+    if -ZONE_M < y < -BEHIND_M:
+        return "near"
+    if COURT_LENGTH + BEHIND_M < y < COURT_LENGTH + ZONE_M:
+        return "far"
+    return None
 
 
 def serving_end(
@@ -35,12 +63,16 @@ def serving_end(
     a, b = np.searchsorted(players.frame, [lo, hi])
     x, y = court_xy[a:b, 0], court_xy[a:b, 1]
     across = (x >= -SIDE_M) & (x <= COURT_WIDTH + SIDE_M)
-    near, far = across & (y < -BEHIND_M), across & (y > COURT_LENGTH + BEHIND_M)
-    for i in a + np.flatnonzero(near | far):
+    near = across & (y < -BEHIND_M) & (y > -ZONE_M)
+    far = across & (y > COURT_LENGTH + BEHIND_M) & (y < COURT_LENGTH + ZONE_M)
+    for i in range(a, b):
         c = int(players.frame[i])
-        if c < len(track) and track.visible[c] and _inside((track.x[c], track.y[c]), reach_box(players.box[i], p)):
-            if _leaves(c, int(players.track_id[i]), players.box[i], track, players, p, fps):
-                return ("near" if court_xy[i, 1] < NET_Y else "far"), c, "contact"
+        if not (c < len(track) and track.visible[c] and _inside((track.x[c], track.y[c]), reach_box(players.box[i], p))):
+            continue
+        j = standing_row(i, players, fps)
+        end = behind(court_xy[j, 1]) if -SIDE_M <= court_xy[j, 0] <= COURT_WIDTH + SIDE_M else None
+        if end and _leaves(c, int(players.track_id[i]), players.box[i], track, players, p, fps):
+            return end, c, "contact"
     n_near, n_far = int(near.sum()), int(far.sum())
     if n_near == n_far:
         return None, None, "none"
@@ -50,6 +82,25 @@ def serving_end(
 def serve_windows(intervals_s, fps: float) -> list[tuple[int, int]]:
     """The frames serving_end looks at for each rally."""
     return [(max(0, round((s - BEFORE_S) * fps)), round((s + AFTER_S) * fps)) for s, _ in intervals_s]
+
+
+def cached_people(cache: Path, video: Path, windows: list[tuple[int, int]], every: int) -> Players:
+    """detect_people, reusing cache (players.csv format) and its .json sidecar when they cover these windows."""
+    import json
+
+    from vball.players import load_players, save_players
+
+    meta = cache.with_suffix(".json")
+    if cache.exists() and meta.exists():
+        done = json.loads(meta.read_text())
+        if done["every"] == every and {tuple(w) for w in windows} <= {tuple(w) for w in done["windows"]}:
+            p = load_players(cache)
+            order = np.argsort(p.frame, kind="stable")
+            return Players(p.frame[order], p.track_id[order], p.box[order], p.score[order])
+    p = detect_people(video, windows, every)
+    save_players(cache, zip(p.frame, p.track_id, *p.box.T, p.score))
+    meta.write_text(json.dumps({"every": every, "windows": [list(w) for w in windows]}))
+    return p
 
 
 def detect_people(video: Path, windows: list[tuple[int, int]], every: int) -> Players:
@@ -81,11 +132,28 @@ def detect_people(video: Path, windows: list[tuple[int, int]], every: int) -> Pl
     return Players(p.frame[order], p.track_id[order], p.box[order], p.score[order])
 
 
-def match_serving(intervals_s, track: BallTrack, players: Players, court_xy: np.ndarray, fps: float) -> list[dict]:
-    """One row per rally (seconds); players sorted by frame."""
+def ball_end(start: int, track: BallTrack, fps: float, tape_y: float) -> str | None:
+    """Low cameras: near if the first quarter of the ball sightings (rally start - 0.5 s .. + 2 s) reaches more than
+    BALL_ABOVE_TAPE_PX above the net tape's image height, far otherwise; None with under 3 sightings."""
+    a, b = max(0, start - round(0.5 * fps)), start + round(2.0 * fps)
+    f = a + np.flatnonzero(track.visible[a:b])
+    if len(f) < 3:
+        return None
+    return "near" if track.y[f[: max(3, len(f) // 4)]].min() < tape_y - BALL_ABOVE_TAPE_PX else "far"
+
+
+def match_serving(intervals_s, track: BallTrack, players: Players, court_xy: np.ndarray, fps: float,
+                  tape_at=None) -> list[dict]:
+    """One row per rally (seconds); players sorted by frame. tape_at(frame) -> the net tape's image y, given only for
+    a low camera, makes the ball decide first."""
     rows = []
     for s, e in intervals_s:
-        end, frame, how = serving_end(round(s * fps), track, players, court_xy, fps)
+        start = round(s * fps)
+        end = ball_end(start, track, fps, tape_at(start)) if tape_at else None
+        if end:
+            frame, how = None, "ball"
+        else:
+            end, frame, how = serving_end(start, track, players, court_xy, fps)
         rows.append({"start_s": s, "end_s": e, "end": end, "how": how,
                      "serve_s": frame / fps if frame is not None else s, "defense_near": None, "defense_far": None})
     return rows

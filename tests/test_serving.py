@@ -24,9 +24,49 @@ def test_ball_leaving_a_player_behind_the_far_baseline_decides():
     assert (end, how) == ("far", "contact") and frame is not None
 
 
+def test_a_jump_server_is_placed_where_he_stood():
+    # standing behind the near baseline until the toss, then in the air (feet near camera height map to the far end)
+    p, xy = standing([-1.0])
+    air = p.frame >= START - 5
+    p.box[air] = p.box[air] - [0, 60, 0, 60]
+    xy[air] = (4.5, 20.0)
+    assert serving.serving_end(START, serve_ball(), p, xy, FPS)[::2] == ("near", "contact")
+
+
 def test_without_a_contact_the_end_with_more_players_behind_its_baseline_serves():
     p, xy = standing([-1.0, 19.0, 19.5])
     assert serving.serving_end(START, ball({}), p, xy, FPS)[::2] == ("far", "count")
+
+
+def test_low_camera_ball_first_seen_high_above_the_tape_is_a_near_serve():
+    high = ball({f: (900.0, 100.0 + 5 * (f - START)) for f in range(START, START + 30)})  # enters from the top
+    low = ball({f: (900.0, 420.0 - 2 * (f - START)) for f in range(START, START + 30)})  # starts near the tape
+    assert serving.ball_end(START, high, FPS, tape_y=450.0) == "near"
+    assert serving.ball_end(START, low, FPS, tape_y=450.0) == "far"
+    assert serving.ball_end(START, ball({}), FPS, tape_y=450.0) is None
+    p, xy = standing([19.0])  # players say far, the ball says near: on a low camera the ball wins
+    rows = serving.match_serving([(START / FPS, START / FPS + 5)], high, p, xy, FPS, tape_at=lambda f: 450.0)
+    assert (rows[0]["end"], rows[0]["how"]) == ("near", "ball")
+
+
+def test_people_far_beyond_a_baseline_are_not_servers():
+    p, xy = standing([-1.0, 40.0, 45.0])  # one near server; two people by the far wall, 22+ m past the baseline
+    assert serving.serving_end(START, ball({}), p, xy, FPS)[::2] == ("near", "count")
+
+
+def test_people_detections_are_cached(tmp_path, monkeypatch):
+    calls = []
+
+    def fake_detect(video, windows, every):
+        calls.append(windows)
+        return Players.from_rows([(5, 0, 1.0, 2.0, 3.0, 4.0, 0.9)])
+
+    monkeypatch.setattr(serving, "detect_people", fake_detect)
+    cache = tmp_path / "serve_people.csv"
+    a = serving.cached_people(cache, tmp_path / "v.mp4", [(0, 10), (20, 30)], 1)
+    b = serving.cached_people(cache, tmp_path / "v.mp4", [(20, 30)], 1)  # covered: reused
+    serving.cached_people(cache, tmp_path / "v.mp4", [(40, 50)], 1)  # not covered: detected again
+    assert len(calls) == 2 and b.frame.tolist() == a.frame.tolist() == [5]
 
 
 def test_nobody_behind_a_baseline_is_unknown():

@@ -62,6 +62,10 @@ class Paths:
         """Serving end and serve time per rally (vball serving)."""
         return self.match_dir(match_id) / "serving.csv"
 
+    def serve_people_csv(self, match_id: int) -> Path:
+        """RF-DETR person boxes in each rally's serve window (vball serving; reused while the rallies stay the same)."""
+        return self.match_dir(match_id) / "serve_people.csv"
+
     def actions_csv(self, match_id: int) -> Path:
         """Action detector boxes after each serve (vball serving)."""
         return self.match_dir(match_id) / "actions.csv"

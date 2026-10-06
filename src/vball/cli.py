@@ -288,7 +288,8 @@ def main(argv: list[str] | None = None) -> int:
             intervals, source = rally_intervals(paths, conn, args.match_id)
             if args.people == "rfdetr":
                 print(f"RF-DETR on {len(intervals)} serve windows...")
-                players = serving.detect_people(paths.work_video(args.match_id), serving.serve_windows(intervals, fps),
+                players = serving.cached_people(paths.serve_people_csv(args.match_id), paths.work_video(args.match_id),
+                                                serving.serve_windows(intervals, fps),
                                                 every=max(1, round(fps / 30)))
             else:
                 players = pl_mod.load_players(paths.players_csv(args.match_id))
@@ -297,7 +298,17 @@ def main(argv: list[str] | None = None) -> int:
                                          players.score[order])
             court_xy = pl_mod.feet_to_court(players.frame, players.box, cal)
             track = load_tracknet_csv(paths.ball_csv(args.match_id), match["n_frames"])
-            rows = serving.match_serving(intervals, track, players, court_xy, fps)
+            import numpy as np
+
+            from vball.camera3d import fit_camera
+
+            cam, _ = fit_camera(cal, match["width"], match["height"])
+            tape_at = None
+            if cam.centre()[2] < serving.LOW_CAMERA_M:
+                print(f"low camera ({cam.centre()[2]:.2f} m): the ball decides the serving end first")
+                tape = np.array([[4.5, 9.0, cal.net_height_m]])
+                tape_at = lambda f: float(cam.project(tape, f)[0, 1])  # noqa: E731
+            rows = serving.match_serving(intervals, track, players, court_xy, fps, tape_at)
             if not args.no_actions and paths.actions_csv(args.match_id).exists() and not args.redo_actions:
                 print("reusing actions.csv (--redo-actions to run the action detector again)")
                 serving.mark_defense(rows, serving.load_actions(paths.actions_csv(args.match_id)), fps)
@@ -310,10 +321,10 @@ def main(argv: list[str] | None = None) -> int:
             elif not args.no_actions:
                 print(f"no action detector at {ACTIONS_WEIGHTS}: receive check skipped")
             serving.save_serving(paths.serving_csv(args.match_id), rows)
-            how = [r["how"] for r in rows]
+            how = [r["how"] for r in rows]  # contact / count / ball / none
             ends = "".join({"near": "N", "far": "F"}.get(r["end"], "?") for r in rows)
-            print(f"{len(rows)} rallies ({source}): contact {how.count('contact')}, count {how.count('count')}, "
-                  f"unknown {how.count('none')}")
+            print(f"{len(rows)} rallies ({source}): ball {how.count('ball')}, contact {how.count('contact')}, "
+                  f"count {how.count('count')}, unknown {how.count('none')}")
             print(f"serving ends: {ends}")
             print(f"wrote {paths.serving_csv(args.match_id)}")
 
