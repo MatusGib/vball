@@ -278,7 +278,7 @@ main.stats > section { margin-bottom: 16px; }
 .entry .meta { color: var(--on-kit-soft); font-size: 12px; margin-top: 3px; }
 .entry .use b { color: var(--on-kit-soft); font-weight: 600; }
 @media (max-width: 900px) { .entry { grid-template-columns: 1fr; } }
-.entry .work { grid-column: 1 / -1; margin-top: 4px; border-left: 3px solid var(--court); padding: 2px 0 2px 12px; }
+.entry .work { grid-column: 1 / -1; margin-top: 4px; padding: 6px 0 2px; border-top: 1px solid var(--kit-2); }
 .entry .work summary { cursor: pointer; font: 700 13px var(--ui); color: var(--on-kit-soft); letter-spacing: 0.03em; text-transform: uppercase; }
 .work-item { padding: 8px 0 4px; border-bottom: 1px dashed var(--kit-3); }
 .work-item:last-child { border-bottom: 0; }

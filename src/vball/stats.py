@@ -121,8 +121,6 @@ def match_serving(paths: Paths, conn: sqlite3.Connection, match_id: int) -> tupl
     and server, the team summary and per-player serves. Fixes and the lineup come from meta.json."""
     path = paths.serving_csv(match_id)
     if not path.exists():
-        if not paths.players_csv(match_id).exists():
-            return None, f"no player tracks: run uv run vball players {match_id}, then uv run vball serving {match_id}"
         if not paths.court_json(match_id).exists():
             return None, f"calibrate the court, then run: uv run vball serving {match_id}"
         return None, f"run: uv run vball serving {match_id}"

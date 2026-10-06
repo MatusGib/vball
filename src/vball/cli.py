@@ -101,6 +101,9 @@ def build_parser() -> argparse.ArgumentParser:
     sv = sub.add_parser("serving", help="which end served each rally (+ receive check); writes serving.csv")
     sv.add_argument("match_id", type=int)
     sv.add_argument("--no-actions", action="store_true", help="skip the action detector (receive check)")
+    sv.add_argument("--redo-actions", action="store_true", help="re-run the action detector instead of reusing actions.csv")
+    sv.add_argument("--people", choices=["rfdetr", "tracks"], default="rfdetr",
+                    help="find the server with RF-DETR on the serve windows (default) or with players.csv tracks")
 
     s = sub.add_parser("serve", help="start the web app")
     s.add_argument("--port", type=int, default=8000)
@@ -273,22 +276,32 @@ def main(argv: list[str] | None = None) -> int:
             from vball import serving
             from vball.stats import rally_intervals
 
-            for need, what in ((paths.court_json(args.match_id), "calibrate the court first (viewer: Calibrate court)"),
-                               (paths.players_csv(args.match_id), f"run first: uv run vball players {args.match_id}")):
+            needs = [(paths.court_json(args.match_id), "calibrate the court first (viewer: Calibrate court)")]
+            if args.people == "tracks":
+                needs.append((paths.players_csv(args.match_id), f"run first: uv run vball players {args.match_id}"))
+            for need, what in needs:
                 if not need.exists():
                     print(what, file=sys.stderr)
                     return 1
             fps = match["fps"]
             cal = load_calibration(paths.court_json(args.match_id))
-            players = pl_mod.load_players(paths.players_csv(args.match_id))
-            order = players.frame.argsort(kind="stable")
-            players = pl_mod.Players(players.frame[order], players.track_id[order], players.box[order],
-                                     players.score[order])
+            intervals, source = rally_intervals(paths, conn, args.match_id)
+            if args.people == "rfdetr":
+                print(f"RF-DETR on {len(intervals)} serve windows...")
+                players = serving.detect_people(paths.work_video(args.match_id), serving.serve_windows(intervals, fps),
+                                                every=max(1, round(fps / 30)))
+            else:
+                players = pl_mod.load_players(paths.players_csv(args.match_id))
+                order = players.frame.argsort(kind="stable")
+                players = pl_mod.Players(players.frame[order], players.track_id[order], players.box[order],
+                                         players.score[order])
             court_xy = pl_mod.feet_to_court(players.frame, players.box, cal)
             track = load_tracknet_csv(paths.ball_csv(args.match_id), match["n_frames"])
-            intervals, source = rally_intervals(paths, conn, args.match_id)
             rows = serving.match_serving(intervals, track, players, court_xy, fps)
-            if not args.no_actions and ACTIONS_WEIGHTS.exists():
+            if not args.no_actions and paths.actions_csv(args.match_id).exists() and not args.redo_actions:
+                print("reusing actions.csv (--redo-actions to run the action detector again)")
+                serving.mark_defense(rows, serving.load_actions(paths.actions_csv(args.match_id)), fps)
+            elif not args.no_actions and ACTIONS_WEIGHTS.exists():
                 print(f"action detector on {len(rows)} serves...")
                 actions = serving.detect_actions(paths.work_video(args.match_id), serving.action_windows(rows, fps),
                                                  cal, ACTIONS_WEIGHTS, every=max(1, round(fps / 15)))

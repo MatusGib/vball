@@ -47,6 +47,40 @@ def serving_end(
     return ("near" if n_near > n_far else "far"), None, "count"
 
 
+def serve_windows(intervals_s, fps: float) -> list[tuple[int, int]]:
+    """The frames serving_end looks at for each rally."""
+    return [(max(0, round((s - BEFORE_S) * fps)), round((s + AFTER_S) * fps)) for s, _ in intervals_s]
+
+
+def detect_people(video: Path, windows: list[tuple[int, int]], every: int) -> Players:
+    """RF-DETR Medium person boxes on every `every`-th frame of each window. It finds the far-end server on the low
+    Brunel away camera where the YOLO11 tracks miss him (eye-checked serving ends 29/30 vs 25/30; Kent 3 35/36 vs
+    34/36, docs/results/phase2e). One id per box: serving_end only needs the box at the contact."""
+    import cv2
+    from rfdetr import RFDETRMedium  # heavy import, only when used
+
+    model = RFDETRMedium()
+    cap = cv2.VideoCapture(str(video))
+    rows = []
+    for a, b in windows:
+        cap.set(cv2.CAP_PROP_POS_FRAMES, a)
+        for f in range(a, b + 1):
+            if (f - a) % every:
+                if not cap.grab():
+                    break
+                continue
+            ok, image = cap.read()
+            if not ok:
+                break
+            d = model.predict(image[:, :, ::-1].copy(), threshold=0.35)
+            for box, conf in zip(d.xyxy[d.class_id == 1], d.confidence[d.class_id == 1]):
+                rows.append((f, len(rows), *box, conf))
+    cap.release()
+    p = Players.from_rows(rows)
+    order = np.argsort(p.frame, kind="stable")
+    return Players(p.frame[order], p.track_id[order], p.box[order], p.score[order])
+
+
 def match_serving(intervals_s, track: BallTrack, players: Players, court_xy: np.ndarray, fps: float) -> list[dict]:
     """One row per rally (seconds); players sorted by frame."""
     rows = []

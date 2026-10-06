@@ -10,7 +10,15 @@
       "status": "used",
       "link": "https://github.com/qaz812345/TrackNetV3",
       "what": "Ball tracker that looks at 3 consecutive frames and outputs a heat map of where the ball is.",
-      "use": "Our ball tracker. Vendored in third_party/TrackNetV3 with 3 small patches (loading, empty clips, detection threshold)."
+      "use": "Our ball tracker. Vendored in third_party/TrackNetV3 with 3 small patches (loading, empty clips, detection threshold).",
+      "work": [
+        {
+          "date": "2026-10-03",
+          "title": "Ball tracker for every set",
+          "result": "Vendored with 3 small patches; fine-tuned on our footage (ball v1), it tracks the ball in all 11 sets and drives rally cutting, 3D flights and contacts.",
+          "doc": "docs/results/phase2a-ball.md"
+        }
+      ]
     },
     {
       "name": "deadfast beach-volley-vision weights",
@@ -20,7 +28,34 @@
       "status": "used",
       "link": "https://huggingface.co/deadfast/beach-volley-vision-models",
       "what": "TrackNetV3 weights fine-tuned on beach volleyball.",
-      "use": "Starting point for our ball tracker. Fine-tuned on our own footage with automatic labels (ball v1): recall in an unseen gym went from 0.32 to 0.66."
+      "use": "Starting point for our ball tracker. Fine-tuned on our own footage with automatic labels (ball v1): recall in an unseen gym went from 0.32 to 0.66.",
+      "work": [
+        {
+          "date": "2026-10-03",
+          "title": "Starting weights, then fine-tuned on our gyms",
+          "result": "On 100 clicked frames per held-out set, at 15 px:",
+          "table": {
+            "head": [
+              "Ball model",
+              "Kent 2 precision / recall",
+              "Brunel away 3 precision / recall"
+            ],
+            "rows": [
+              [
+                "beach weights as downloaded",
+                "0.64 / 0.49",
+                "0.84 / 0.32"
+              ],
+              [
+                "after fine-tuning (ball v1, default)",
+                "0.67 / 0.73",
+                "0.87 / 0.66"
+              ]
+            ]
+          },
+          "doc": "docs/results/phase2a-ball.md"
+        }
+      ]
     },
     {
       "name": "VballNet dataset",
@@ -30,7 +65,34 @@
       "status": "used",
       "link": "https://github.com/asigatchov/vball-net",
       "what": "About 29,000 hand-labelled ball positions from indoor amateur gym footage, the closest public match to our camera.",
-      "use": "Added to training for ball v2: more recall (0.73 to 0.90 on Kent 2) but a little less precision, so v1 stayed the default."
+      "use": "Added to training for ball v2: more recall (0.73 to 0.90 on Kent 2) but a little less precision, so v1 stayed the default.",
+      "work": [
+        {
+          "date": "2026-10-03",
+          "title": "Added 29k hand-labelled frames to training (ball v2)",
+          "result": "More recall, a little less precision, so v1 stays the default.",
+          "table": {
+            "head": [
+              "Ball model",
+              "Kent 2 precision / recall",
+              "Brunel away 3 precision / recall"
+            ],
+            "rows": [
+              [
+                "ball v1 (default)",
+                "0.67 / 0.73",
+                "0.87 / 0.66"
+              ],
+              [
+                "ball v2 (+ VballNet)",
+                "0.65 / 0.90",
+                "0.83 / 0.84"
+              ]
+            ]
+          },
+          "doc": "docs/results/phase2b-ball.md"
+        }
+      ]
     },
     {
       "name": "fast-volleyball-tracking-inference: VballNet models",
@@ -40,7 +102,44 @@
       "status": "tested",
       "link": "https://github.com/asigatchov/fast-volleyball-tracking-inference",
       "what": "Ready-made indoor ball trackers (VballNetV4c, VballNetGridV3).",
-      "use": "Benchmarked against ours on clicked frames: as good or better overall (GridV3 precision 0.89–0.97), none best everywhere. Candidate ball source for touch detection."
+      "use": "Benchmarked against ours on clicked frames: as good or better overall (GridV3 precision 0.89–0.97), none best everywhere. Candidate ball source for touch detection.",
+      "work": [
+        {
+          "date": "2026-10-03",
+          "title": "Benchmarked four ONNX ball models on the clicked frames",
+          "result": "As good or better than ours on Kent 2; none best everywhere. They also follow balls held between points, so ours stays for rally cutting.",
+          "table": {
+            "head": [
+              "Ball model",
+              "Kent 2 precision / recall",
+              "Brunel away 3 precision / recall"
+            ],
+            "rows": [
+              [
+                "VballNetV4c",
+                "0.84 / 0.94",
+                "0.83 / 0.69"
+              ],
+              [
+                "VballNetGridV2b",
+                "0.86 / 0.77",
+                "0.98 / 0.65"
+              ],
+              [
+                "VballNetFastV1",
+                "0.74 / 0.86",
+                "0.89 / 0.60"
+              ],
+              [
+                "VballNetGridV3",
+                "0.89 / 0.80",
+                "0.97 / 0.68"
+              ]
+            ]
+          },
+          "doc": "docs/results/phase2b-ball.md"
+        }
+      ]
     },
     {
       "name": "fast-volleyball-tracking-inference: RAVEL-VB",
@@ -50,7 +149,14 @@
       "status": "tested",
       "link": "https://github.com/asigatchov/fast-volleyball-tracking-inference",
       "what": "Player and ball detector with tracking, runs on the CPU (OpenVINO).",
-      "use": "Compared with YOLO11 on 3 sets: slightly more full-side frames on Kent (19–22% vs 16%) but it collapsed on the 60 fps set (0%, 69 ids per side per rally). Not chosen."
+      "use": "Compared with YOLO11 on 3 sets: slightly more full-side frames on Kent (19–22% vs 16%) but it collapsed on the 60 fps set (0%, 69 ids per side per rally). Not chosen.",
+      "work": [
+        {
+          "date": "2026-10-04",
+          "title": "Player tracker compared with YOLO11 on 3 sets",
+          "result": "Slightly more full-side frames on Kent (19–22% vs 16%) but it collapsed on the 60 fps Brunel set (0% full sides, 69 ids per side per rally). Not chosen."
+        }
+      ]
     },
     {
       "name": "Ultralytics YOLO11 + ByteTrack",
@@ -60,17 +166,55 @@
       "status": "used",
       "link": "https://github.com/ultralytics/ultralytics",
       "what": "General person detector with a multi-object tracker. Not in the reference list.",
-      "use": "Our player tracker on all 11 sets. Weak spots: far-side players hidden behind near ones, and many id switches."
+      "use": "Our player tracker on all 11 sets. Weak spots: far-side players hidden behind near ones, and many id switches.",
+      "work": [
+        {
+          "date": "2026-10-05",
+          "title": "Player tracks on all 11 sets",
+          "result": "players.csv for every set; feeds the side heat maps, team sides and the serving end."
+        },
+        {
+          "date": "2026-10-06",
+          "title": "Fix: spectators above the floor's horizon were counted as near-end servers",
+          "result": "On the 0.5 m Brunel away camera, feet on the far balcony map behind the camera (court y −18 to −124 m), i.e. behind the near baseline, so nearly every serve looked like ours. Feet past the horizon now get no court position.",
+          "table": {
+            "head": [
+              "Serving end right (eye-checked rallies)",
+              "Before",
+              "After"
+            ],
+            "rows": [
+              [
+                "Brunel away 3 (30 rallies)",
+                "16 / 30",
+                "25 / 30"
+              ],
+              [
+                "Kent 3 (36 rallies)",
+                "34 / 36",
+                "34 / 36"
+              ]
+            ]
+          }
+        }
+      ]
     },
     {
       "name": "SportsMOT",
       "area": "Players",
       "kind": "dataset",
       "licence": "check on sign-up",
-      "status": "next",
+      "status": "needs you",
       "link": "https://github.com/MCG-NJU/SportsMOT",
       "what": "Player tracks (not just boxes) for basketball, volleyball and football: about 29k volleyball frames, with a sports tracker baseline (MixSort).",
-      "use": "Planned for better player tracking (fewer id switches). Needs a CodaLab account: sign up yourself, then Participate → Get Data."
+      "use": "Planned for better player tracking (fewer id switches). Needs a CodaLab account: sign up yourself, then Participate → Get Data.",
+      "work": [
+        {
+          "date": "2026-10-06",
+          "title": "Blocked: needs your CodaLab account",
+          "result": "The data is behind a CodaLab competition sign-up (Participate → Get Data). Once you have it: train ByteTrack/MixSort-style association on its volleyball clips to cut id switches, which per-player stats need."
+        }
+      ]
     },
     {
       "name": "VolleyVision (Roboflow sets)",
@@ -80,17 +224,152 @@
       "status": "used",
       "link": "https://github.com/shukkkur/VolleyVision",
       "what": "Player, ball, action and court-segmentation image sets, mostly from other camera angles.",
-      "use": "Its YOLOv8m action detector (models/volleyvision/actions_yv8m.pt) checks whether the receivers played each serve (vball serving). It sees the far team, facing the camera, far better than the near team's backs."
+      "use": "Action detector checks whether the receivers played each serve (hint only); its ball model is the most precise on Kent 2; its player model misses far players.",
+      "work": [
+        {
+          "date": "2026-10-06",
+          "title": "Action detector (YOLOv8m): did the receivers play the serve?",
+          "result": "Run after every serve in all 11 sets (vball serving). It sees the far team, facing the camera, well (passes and spikes) and the near team's backs poorly. Against your 40 serve results on Kent 1 it is not reliable enough to decide: a receiver catching an out ball looks like a pass. Kept only as a hint for serves to check.",
+          "table": {
+            "head": [
+              "Your result (Kent 1)",
+              "receive seen",
+              "not seen"
+            ],
+            "rows": [
+              [
+                "in (32)",
+                "22",
+                "9 (+1 unknown)"
+              ],
+              [
+                "serve error (7)",
+                "2",
+                "4 (+1 unknown)"
+              ],
+              [
+                "ace (1)",
+                "0",
+                "1"
+              ]
+            ]
+          },
+          "img": "img/sources/volleyvision-actions.jpg",
+          "caption": "Kent 3, longest rally: far-side passes ('defense') and attacks ('spike') found; near-side set barely (0.17)."
+        },
+        {
+          "date": "2026-10-06",
+          "title": "Ball detector (YOLOv7-tiny, single images)",
+          "result": "Best precision and recall of any model on Kent 2, weaker on the low Brunel away camera. Single images, so no tracking yet.",
+          "table": {
+            "head": [
+              "Ball model",
+              "Kent 2 precision / recall",
+              "Brunel away 3 precision / recall"
+            ],
+            "rows": [
+              [
+                "VolleyVision YOLOv7-tiny",
+                "0.94 / 0.85",
+                "0.88 / 0.43"
+              ],
+              [
+                "our tracker (default)",
+                "0.67 / 0.73",
+                "0.87 / 0.66"
+              ],
+              [
+                "RF-DETR Medium, COCO 'sports ball'",
+                "0.93 / 0.62",
+                "0.91 / 0.52"
+              ]
+            ]
+          }
+        },
+        {
+          "date": "2026-10-06",
+          "title": "Player detector (YOLOv8m) for the serving end",
+          "result": "Missed most far-end players, so nearly every serve looked like the near end's: 19 / 36 serving ends right on Kent 3 (YOLO11 tracks: 34 / 36). Not used."
+        }
+      ]
     },
     {
       "name": "ddecks beach-volley-vision",
       "area": "Players",
       "kind": "code + tools",
       "licence": "MIT",
-      "status": "not tried",
+      "status": "used",
       "link": "https://github.com/ddecks/beach-volley-vision",
       "what": "Beach volleyball pipeline: ball-visibility rally state machine, serve detection, RF-DETR player detector with ByteTrack.",
-      "use": "Read 2026-10-06: no per-player stats; its serve side by court depth + trajectory is the idea we tested (serving end right on 94% of clear Kent 3 rallies, see docs/results/phase2e). RF-DETR stays the candidate for low cameras."
+      "use": "Its serve-side idea became vball serving (serving end per rally); RF-DETR from its pipeline tested as our player detector.",
+      "work": [
+        {
+          "date": "2026-10-06",
+          "title": "Its serve-side idea (court depth + who serves) tested on Kent 3",
+          "result": "Which end served each rally, against 36 rallies checked by eye. The players behind each baseline beat the 3D ball fit; this became vball serving.",
+          "table": {
+            "head": [
+              "Method",
+              "Right"
+            ],
+            "rows": [
+              [
+                "3D fit of the first flight",
+                "25 / 36"
+              ],
+              [
+                "two 3D fits (near vs far server)",
+                "26 / 36"
+              ],
+              [
+                "players standing behind each baseline",
+                "32 / 36"
+              ],
+              [
+                "ball leaving a player behind a baseline, else the count",
+                "34 / 36"
+              ]
+            ]
+          },
+          "img": "img/sources/serving-end-sheet.jpg",
+          "caption": "Kent 3 rally starts with the first 1.5 s of ball path, used to check the serving end by eye.",
+          "doc": "docs/results/phase2e-player-stats-feasibility.md"
+        },
+        {
+          "date": "2026-10-06",
+          "title": "Its player detector (RF-DETR + ByteTrack): RF-DETR Medium for the serving end",
+          "result": "Best of the four detectors at finding the server on both eye-checked sets, so it is now the default in vball serving (about 4–6 minutes per set on the 3050).",
+          "table": {
+            "head": [
+              "Player detector",
+              "Kent 3 (36 rallies)",
+              "Brunel away 3 (30 rallies)"
+            ],
+            "rows": [
+              [
+                "RF-DETR Medium",
+                "35 / 36",
+                "29 / 30"
+              ],
+              [
+                "YOLO11s tracks (after the horizon fix)",
+                "34 / 36",
+                "25 / 30"
+              ],
+              [
+                "YOLO11m-pose, server's wrist at the ball",
+                "32 / 36",
+                "23 / 30"
+              ],
+              [
+                "VolleyVision YOLOv8m players",
+                "19 / 36",
+                "–"
+              ]
+            ]
+          }
+        }
+      ]
     },
     {
       "name": "Ibrahim et al. Volleyball dataset",
@@ -100,7 +379,14 @@
       "status": "not tried",
       "link": "https://github.com/mostafa-saad/deep-activity-rec",
       "what": "4,830 broadcast clips with player boxes and 9 individual / 8 group actions.",
-      "use": "Not used: broadcast side view, far from our camera behind the baseline."
+      "use": "Not used: broadcast side view, far from our camera behind the baseline.",
+      "work": [
+        {
+          "date": "2026-10-06",
+          "title": "Not run: broadcast side view",
+          "result": "4,830 broadcast clips filmed from the side, unlike our phone behind the baseline; its player boxes and actions would not transfer, and RF-DETR / pose already cover players. Download not requested."
+        }
+      ]
     },
     {
       "name": "Court-Keypoint-Detection",
@@ -110,7 +396,14 @@
       "status": "not usable",
       "link": "https://github.com/asigatchov/Court-Keypoint-Detection",
       "what": "YOLO11 court keypoints trained on back-view gym cameras, the right viewpoint for automatic calibration.",
-      "use": "No published weights, data or licence, so court calibration is clicked by hand (with the magnifier), or drafted from a sister set (vball courtcopy)."
+      "use": "No published weights, data or licence, so court calibration is clicked by hand (with the magnifier), or drafted from a sister set (vball courtcopy).",
+      "work": [
+        {
+          "date": "2026-10-06",
+          "title": "Re-checked: still no weights or data",
+          "result": "The repo (last push 2026-01-08) has training and inference scripts and an annotator, but no model file, dataset or licence. Court calibration stays manual with the magnifier, or drafted with vball courtcopy."
+        }
+      ]
     },
     {
       "name": "Roboflow single-image ball sets",
@@ -120,37 +413,65 @@
       "status": "not usable",
       "link": "https://universe.roboflow.com/",
       "what": "Ball boxes on single images.",
-      "use": "Our tracker needs consecutive frames, so single images cannot train it."
+      "use": "Our tracker needs consecutive frames, so single images cannot train it.",
+      "work": [
+        {
+          "date": "2026-10-06",
+          "title": "Not usable for the tracker; single-image detectors tested instead",
+          "result": "Our tracker learns from consecutive frames. Two single-image ball detectors trained on such data were scored on the clicked frames: see VolleyVision (YOLOv7-tiny) and RF-DETR."
+        }
+      ]
     },
     {
       "name": "WASB (Widely Applicable Strong Baseline)",
       "area": "Ball",
       "kind": "code + data",
       "licence": "see repo",
-      "status": "not tried",
+      "status": "needs you",
       "link": "https://github.com/nttcom/WASB-SBDT",
       "what": "Small-ball detection baseline across 5 sports, including volleyball.",
-      "use": "Not tried; our tracker plus VballNet already cover the ball."
+      "use": "Wanted in the ball benchmark next to VballNet and VolleyVision; blocked until its code (MIT, under 1 MB) may be downloaded.",
+      "work": [
+        {
+          "date": "2026-10-06",
+          "title": "Blocked: the weights need the WASB code",
+          "result": "You approved the volleyball weights (Google Drive) but not code repos; the model is defined in the repo (MIT, under 1 MB). With the code it can be scored on the clicked ball frames like the others."
+        }
+      ]
     },
     {
       "name": "VNL-STES",
       "area": "Actions",
       "kind": "dataset + code",
       "licence": "with Volleyball World permission",
-      "status": "not tried",
+      "status": "needs you",
       "link": "https://github.com/hoangqnguyen/spot",
       "what": "6,137 frame-accurate events (serve, receive, set, spike, block, score) in 1,028 broadcast rallies.",
-      "use": "Read 2026-10-06: serve 17%, receive 25%, set 23%, spike 22%, block 9%, score 4% of 6,137 events; 74–77% spotting within 1–4 frames; 13 GB, no published weights. Kept for touch spotting (phase 2c)."
+      "use": "The training data for touch / action spotting (phase 2c); blocked on disk space (13 GB download, 16 GB free).",
+      "work": [
+        {
+          "date": "2026-10-06",
+          "title": "Blocked: not enough disk space",
+          "result": "The dataset is 13 GB (SharePoint download from the authors); C: has 16 GB free, and unpacking needs about twice that. Free ~30 GB or plug in a drive, then it trains the touch / action spotter (serve, receive, set, spike, block)."
+        }
+      ]
     },
     {
       "name": "MultiSports (volleyball subset)",
       "area": "Actions",
       "kind": "dataset",
       "licence": "gated",
-      "status": "not tried",
+      "status": "needs you",
       "link": "https://deeperaction.github.io/datasets/multisports.html",
       "what": "12 volleyball action classes with player tubes, broadcast view.",
-      "use": "Kept for action detection (phase 2c)."
+      "use": "Kept for action detection; access needs your request form.",
+      "work": [
+        {
+          "date": "2026-10-06",
+          "title": "Blocked: access is by request form",
+          "result": "The dataset needs a request form signed by you. Broadcast view; useful later for action tubes (who did which action) if VNL-STES is not enough."
+        }
+      ]
     },
     {
       "name": "TU Graz Volleyball Activity 2014",
@@ -160,7 +481,14 @@
       "status": "not tried",
       "link": "https://tugraz.at/index.php?id=17751",
       "what": "7 action classes with player boxes per frame.",
-      "use": "Kept for action detection (phase 2c)."
+      "use": "Kept for action detection (phase 2c); not downloaded yet.",
+      "work": [
+        {
+          "date": "2026-10-06",
+          "title": "Not downloaded yet",
+          "result": "7 action classes with player boxes; not in the download batches you approved today. Ask me to fetch it for the action work (phase 2c)."
+        }
+      ]
     },
     {
       "name": "VREN",
@@ -170,7 +498,50 @@
       "status": "used",
       "link": "https://github.com/haotianxia/VREN",
       "what": "Rally notation (actions and locations) for pro and NCAA matches.",
-      "use": "Downloaded (data/external/vren). Reference rates from its 1,498 points: 16% end in a serve error, 5% in an ace, so a 45-point set should have about 7 serve errors and 2 aces. Used to judge vball's serve outcomes and to suggest ace / error for serves still to check."
+      "use": "Downloaded (data/external/vren). Reference rates from its 1,498 points: 16% end in a serve error, 5% in an ace, so a 45-point set should have about 7 serve errors and 2 aces. Used to judge vball's serve outcomes and to suggest ace / error for serves still to check.",
+      "work": [
+        {
+          "date": "2026-10-06",
+          "title": "Reference rates from 1,498 notated points (NCAA / pro)",
+          "result": "Used to judge vball's serve outcomes and to suggest ace or error for serves to check.",
+          "table": {
+            "head": [
+              "Point ended by",
+              "Share"
+            ],
+            "rows": [
+              [
+                "kill",
+                "40%"
+              ],
+              [
+                "serve error",
+                "16%"
+              ],
+              [
+                "hit error",
+                "14%"
+              ],
+              [
+                "tool (off the block)",
+                "12%"
+              ],
+              [
+                "blocked",
+                "8%"
+              ],
+              [
+                "ace",
+                "5%"
+              ],
+              [
+                "net / other error",
+                "4%"
+              ]
+            ]
+          }
+        }
+      ]
     },
     {
       "name": "openvolley pydatavolley / ovscout2",
@@ -180,27 +551,137 @@
       "status": "not tried",
       "link": "https://github.com/openvolley/ovscout2",
       "what": "Read and create DataVolley scouting files from a fixed-camera video.",
-      "use": "A way to turn scouting into weak labels for actions, if you ever scout a match."
+      "use": "A way to turn scouting into weak labels for actions, if you ever scout a match.",
+      "work": [
+        {
+          "date": "2026-10-06",
+          "title": "Not run: an R scouting app",
+          "result": "Useful as a way for you to scout one set by hand (DataVolley codes) and get per-touch ground truth for checking vball's touches. Its skill / evaluation codes (# + ! - / =) are the model for vball's future touch labels."
+        }
+      ]
     },
     {
       "name": "T-DEED, E2E-Spot, VideoMAE",
       "area": "Actions",
       "kind": "model code",
       "licence": "see repos",
-      "status": "not tried",
+      "status": "needs you",
       "link": "https://github.com/arturxe2/T-DEED",
       "what": "Precise event-spotting and video-clip models.",
-      "use": "Candidates for touch / action spotting in phase 2c."
+      "use": "Touch / action spotting models for phase 2c; need their code and a dataset (VNL-STES).",
+      "work": [
+        {
+          "date": "2026-10-06",
+          "title": "Blocked: needs the code repos",
+          "result": "Event-spotting models with no volleyball weights; they need their code (T-DEED GPL, 46 MB) and a dataset such as VNL-STES to train. Waiting on the code-repo approval and the disk space for VNL-STES."
+        }
+      ]
     },
     {
       "name": "passform",
       "area": "Actions",
       "kind": "code",
       "licence": "see repo",
-      "status": "not tried",
+      "status": "used",
       "link": "https://github.com/williamyen042/passform",
       "what": "Ball trajectory turn → contact frame → nearest player = passer, then pose angles.",
-      "use": "Read 2026-10-06: contact = kink in the ball path, toucher = the person overlapping the ball at that frame. Our flight splits give the kinks; this is the planned touch-attribution rule."
+      "use": "Contact = a split between two fitted flights; toucher = the nearest wrist (YOLO11m-pose). First step to per-player touches.",
+      "work": [
+        {
+          "date": "2026-10-06",
+          "title": "Its touch rule with YOLO11m-pose on Kent 3",
+          "result": "226 contacts on Kent 3 (splits between fitted flights): a wrist was within 0.3 body heights of the ball at 42% of them. Those touches give legal visits (3 or fewer touches per side) 97% of the time (visits of 1, 2, 3, 4 touches: 40, 16, 5, 2). The examples look right (setters, attackers, servers); about half of the contacts still have no wrist close enough.",
+          "img": "img/sources/passform-touches.jpg",
+          "caption": "Kent 3 contacts (yellow ring = ball at the flight split) and the player whose wrist is nearest: blue near end, red far end."
+        }
+      ]
+    },
+    {
+      "name": "RF-DETR (Roboflow)",
+      "area": "Players",
+      "kind": "model + weights",
+      "licence": "Apache-2.0",
+      "status": "used",
+      "link": "https://github.com/roboflow/rf-detr",
+      "what": "Transformer object detector (DINOv2 backbone); Medium is 54.7 COCO AP. The player detector in ddecks beach-volley-vision.",
+      "use": "Finds the server in each rally's serve window (default in vball serving): right on 64 of 66 eye-checked rallies across a high and a low camera.",
+      "work": [
+        {
+          "date": "2026-10-06",
+          "title": "Serving end on Kent 3 and Brunel away 3",
+          "result": "Best of the four detectors at finding the server on both eye-checked sets, so it is now the default in vball serving (about 4–6 minutes per set on the 3050).",
+          "table": {
+            "head": [
+              "Player detector",
+              "Kent 3 (36 rallies)",
+              "Brunel away 3 (30 rallies)"
+            ],
+            "rows": [
+              [
+                "RF-DETR Medium",
+                "35 / 36",
+                "29 / 30"
+              ],
+              [
+                "YOLO11s tracks (after the horizon fix)",
+                "34 / 36",
+                "25 / 30"
+              ],
+              [
+                "YOLO11m-pose, server's wrist at the ball",
+                "32 / 36",
+                "23 / 30"
+              ],
+              [
+                "VolleyVision YOLOv8m players",
+                "19 / 36",
+                "–"
+              ]
+            ]
+          }
+        },
+        {
+          "date": "2026-10-06",
+          "title": "Ball as COCO 'sports ball'",
+          "result": "High precision, lower recall than a ball-specific model.",
+          "table": {
+            "head": [
+              "Ball model",
+              "Kent 2 precision / recall",
+              "Brunel away 3 precision / recall"
+            ],
+            "rows": [
+              [
+                "RF-DETR Medium",
+                "0.93 / 0.62",
+                "0.91 / 0.52"
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "YOLO11m-pose (Ultralytics)",
+      "area": "Players",
+      "kind": "weights",
+      "licence": "AGPL-3.0 (fine for personal use)",
+      "status": "used",
+      "link": "https://docs.ultralytics.com/tasks/pose/",
+      "what": "Person boxes with 17 body keypoints (wrists, elbows, shoulders...).",
+      "use": "Wrist positions for touch attribution (passform's rule) and for finding the server's hand at the serve.",
+      "work": [
+        {
+          "date": "2026-10-06",
+          "title": "Touch attribution on Kent 3",
+          "result": "226 contacts on Kent 3 (splits between fitted flights): a wrist was within 0.3 body heights of the ball at 42% of them. Those touches give legal visits (3 or fewer touches per side) 97% of the time (visits of 1, 2, 3, 4 touches: 40, 16, 5, 2). The examples look right (setters, attackers, servers); about half of the contacts still have no wrist close enough."
+        },
+        {
+          "date": "2026-10-06",
+          "title": "Server's wrist at the ball for the serving end",
+          "result": "Server's wrist at the ball, else the baseline count: 32 / 36 on Kent 3 and 23 / 30 on Brunel away 3, worse than RF-DETR boxes alone. Not used for the serving end."
+        }
+      ]
     }
   ]
 }

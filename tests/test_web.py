@@ -278,7 +278,7 @@ def test_serving_needs_the_command_then_applies_fixes(tmp_path):
     client, match_id = make_client(tmp_path)
     url = f"/api/matches/{match_id}/serving"
     res = client.get(url)
-    assert res.status_code == 404 and "vball players" in res.json()["detail"]
+    assert res.status_code == 404 and "vball serving" in res.json()["detail"]
     paths = Paths(tmp_path / "data")
     rows = [{"start_s": 1.0, "end_s": 10.0, "end": "near", "how": "contact", "serve_s": 1.2, "defense_near": None,
              "defense_far": None},
