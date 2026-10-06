@@ -294,6 +294,7 @@ def test_serving_needs_the_command_then_applies_fixes(tmp_path):
     assert body["rallies"][1]["server"] == "14" and body["players"][0]["aces"] == 1
     stats = client.get(f"/api/matches/{match_id}/stats").json()
     assert stats["serving"]["score"] == {"near": 2, "far": 0} and "serving" not in stats["missing"]
+    assert stats["serving"]["unlabelled_detected"] == []  # detected rallies, no labels
 
 
 def test_match_stats_include_side_level_players(tmp_path):
@@ -331,3 +332,16 @@ def test_sources_page_and_list(tmp_path):
         assert s["status"] in {"used", "tested", "next", "needs you", "not tried", "not usable"} and s["link"].startswith("https://")
         for w in s.get("work", []):
             assert {"date", "title", "result"} <= set(w) and (not w.get("img") or (STATIC_DIR / w["img"]).exists())
+
+
+def test_serving_lists_detected_rallies_missing_from_the_labels(tmp_path):
+    from vball import serving
+    from vball.labels import Label, save_labels
+
+    client, match_id = make_client(tmp_path)
+    paths = Paths(tmp_path / "data")
+    save_labels(paths.gt_csv(match_id), [Label(1.0, 10.0, True)])  # the detected rally at 15-20 s is not labelled
+    serving.save_serving(paths.serving_csv(match_id), [{"start_s": 1.0, "end_s": 10.0, "end": "near", "how": "count",
+                                                        "serve_s": 1.0, "defense_near": None, "defense_far": None}])
+    body = client.get(f"/api/matches/{match_id}/serving").json()
+    assert body["unlabelled_detected"] == [{"start_s": 15.0, "end_s": 20.0}]

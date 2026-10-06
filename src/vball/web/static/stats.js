@@ -225,6 +225,15 @@ function renderReal(m, notes) {
       (gap > 0 ? `: ${gap} missing, so the score can't be exact until they are labelled.` : gap < 0 ? `: ${-gap} too many (false rallies).` : ".") +
       "</li>",
   );
+  const unl = m.serving.unlabelled_detected || [];
+  if (gap > 0 && unl.length)
+    notes.splice(
+      1,
+      0,
+      `<li class="warn">Detected but not in your labels (check each; label it if it was a rally): ` +
+        unl.map((r) => `<a href="${viewerLink(m.id, r.start_s)}">${mmss(r.start_s)} (${(r.end_s - r.start_s).toFixed(1)} s)</a>`).join(", ") +
+        "</li>",
+    );
 }
 
 $("#real-form").onsubmit = async (e) => {

@@ -137,3 +137,37 @@ Reading:
   bumping an out ball looks like a receive to the action detector. The viewer suggests ace or error for each one to
   check (from who served next), one O press each.
 - **Receive seen** is frequent on the Kent camera (21–34 rallies per set) and rare on the low Brunel away camera (0–3).
+
+## Using every source (2026-10-06, later)
+
+The owner gave the real Kent scores (us = near end): 20–25, 22–25, 26–24, 22–25, and marked the outcome of 40 serves
+on Kent 1. Downloads approved: model weights (VolleyVision players / ball / actions, RF-DETR Medium, YOLO11m-pose) and
+the VNL-STES dataset (not fetched: 13 GB with 16 GB free). Code repos were not approved (WASB, T-DEED, STES code). Every
+source's work is logged on the Sources page.
+
+**Serve outcome thresholds from the owner's Kent 1 results.** Aces / errors ended 2.1–3.4 s after the serve, played
+serves 4.2 s or later; the next server matched the owner's ace / error every time; the action detector "saw" a
+receive on 2 of 7 serve errors (out balls caught), so it only hints. New thresholds 3.6 / 4.0 s: 38 / 40 right, 2 to
+check, none wrong.
+
+**Spectators past the floor's horizon.** On the 0.5 m Brunel away camera, feet on the far balcony mapped behind the
+camera (y −18 to −124 m), i.e. behind the near baseline. Such feet now get no court position: Brunel away 3 serving
+ends 16 / 30 → 25 / 30 (eye-checked), Kent 3 unchanged.
+
+**Player detectors for the serving end** (rally start −1 s … +1.5 s, eye-checked rallies):
+
+| Detector | Kent 3 (36) | Brunel away 3 (30) |
+|---|---|---|
+| RF-DETR Medium (now the default) | 35 | 29 |
+| YOLO11s tracks (after the horizon fix) | 34 | 25 |
+| YOLO11m-pose, server's wrist at the ball | 32 | 23 |
+| VolleyVision YOLOv8m players | 19 | – |
+
+**Ball detectors on the clicked frames** (precision / recall at 15 px): VolleyVision YOLOv7-tiny 0.94 / 0.85 (Kent 2),
+0.88 / 0.43 (Brunel away 3); RF-DETR "sports ball" 0.93 / 0.62, 0.91 / 0.52; our tracker 0.67 / 0.73, 0.87 / 0.66.
+
+**Touch attribution (passform's rule, YOLO11m-pose) on Kent 3:** 226 contacts (flight splits); a wrist within 0.3 body
+heights of the ball at 42%; those give legal visits (≤ 3 touches per side) 97% of the time.
+
+**Real scores vs labelled rallies:** Kent 1 has 42 labelled rallies for 45 points played, Kent 2 40 for 47, Kent 3 45
+for 50: some rallies are missing from the labels (or the recording), so the inferred scores cannot be exact there.

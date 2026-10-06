@@ -139,10 +139,14 @@ def match_serving(paths: Paths, conn: sqlite3.Connection, match_id: int) -> tupl
                 speeds[x["rally"]] = x["speed_kmh"]
     for i, r in enumerate(rallies):
         r["speed_kmh"] = speeds.get(i)
+    unlabelled = []
+    if source == "labels":  # detected rallies that overlap no label: often short aces / serve errors left unlabelled
+        unlabelled = [{"start_s": d["start_s"], "end_s": d["end_s"]} for d in store.get_rallies(conn, match_id)
+                      if not any(min(d["end_s"], e) > max(d["start_s"], s) for s, e in intervals)]
     return {
         "source": source, "rallies": rallies, "summary": serving.team_summary(rallies),
         "players": serving.player_serves(rallies, speeds), "lineup": meta["lineup"], "our_side": meta["our_side"],
-        "serve_fix": meta["serve_fix"], "real_score": meta["real_score"],
+        "serve_fix": meta["serve_fix"], "real_score": meta["real_score"], "unlabelled_detected": unlabelled,
     }, None
 
 
