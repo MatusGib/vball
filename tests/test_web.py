@@ -280,3 +280,17 @@ def test_stats_page_is_served_and_linked(tmp_path):
     client, _ = make_client(tmp_path)
     assert 'id="stats-root"' in client.get("/stats.html").text
     assert 'href="/stats.html"' in client.get("/").text
+
+
+def test_sources_page_and_list(tmp_path):
+    import json
+
+    from vball.web.app import STATIC_DIR
+
+    client, _ = make_client(tmp_path)
+    assert 'id="sources-root"' in client.get("/sources.html").text
+    assert 'href="/sources.html"' in client.get("/").text and 'href="/sources.html"' in client.get("/stats.html").text
+    data = json.loads((STATIC_DIR / "sources.json").read_text(encoding="utf-8"))
+    for s in data["sources"]:
+        assert set(s) >= {"name", "area", "kind", "licence", "status", "link", "what", "use"}
+        assert s["status"] in {"used", "tested", "next", "not tried", "not usable"} and s["link"].startswith("https://")

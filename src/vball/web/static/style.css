@@ -125,3 +125,17 @@ main.stats { display: block; max-width: 1180px; margin: 0 auto; }
 .calib-pick { all: unset; cursor: pointer; display: block; width: 100%; }
 .calib-pick:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .draft-note { margin: 4px 0 8px; padding: 6px 10px; border-radius: 6px; background: var(--warn-bg); color: var(--warn); }
+
+/* sources page */
+.filters { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 8px; }
+.filters button[aria-pressed="true"] { border-color: var(--accent); background: var(--row); font-weight: 600; }
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; }
+.card p { margin: 6px 0; }
+.card .meta { color: var(--muted); font-size: 12px; }
+.card-head { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; font-weight: 600; }
+.card .src-status { font-size: 11px; font-weight: 600; padding: 1px 8px; border-radius: 10px; white-space: nowrap; background: var(--row); }
+.src-used { color: var(--label); background: var(--label-bg); }
+.src-tested, .src-next { color: var(--accent); }
+.src-not-usable { color: var(--rec); background: var(--rec-bg); }
+.src-not-tried { color: var(--muted); }

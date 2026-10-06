@@ -1,0 +1,206 @@
+{
+  "updated": "2026-10-06",
+  "reference": "docs/references/external_data.md",
+  "sources": [
+    {
+      "name": "TrackNetV3",
+      "area": "Ball",
+      "kind": "model code",
+      "licence": "MIT",
+      "status": "used",
+      "link": "https://github.com/qaz812345/TrackNetV3",
+      "what": "Ball tracker that looks at 3 consecutive frames and outputs a heat map of where the ball is.",
+      "use": "Our ball tracker. Vendored in third_party/TrackNetV3 with 3 small patches (loading, empty clips, detection threshold)."
+    },
+    {
+      "name": "deadfast beach-volley-vision weights",
+      "area": "Ball",
+      "kind": "weights",
+      "licence": "MIT",
+      "status": "used",
+      "link": "https://huggingface.co/deadfast/beach-volley-vision-models",
+      "what": "TrackNetV3 weights fine-tuned on beach volleyball.",
+      "use": "Starting point for our ball tracker. Fine-tuned on our own footage with automatic labels (ball v1): recall in an unseen gym went from 0.32 to 0.66."
+    },
+    {
+      "name": "VballNet dataset",
+      "area": "Ball",
+      "kind": "dataset",
+      "licence": "not stated (personal use)",
+      "status": "used",
+      "link": "https://github.com/asigatchov/vball-net",
+      "what": "About 29,000 hand-labelled ball positions from indoor amateur gym footage, the closest public match to our camera.",
+      "use": "Added to training for ball v2: more recall (0.73 to 0.90 on Kent 2) but a little less precision, so v1 stayed the default."
+    },
+    {
+      "name": "fast-volleyball-tracking-inference: VballNet models",
+      "area": "Ball",
+      "kind": "ONNX weights + code",
+      "licence": "MIT",
+      "status": "tested",
+      "link": "https://github.com/asigatchov/fast-volleyball-tracking-inference",
+      "what": "Ready-made indoor ball trackers (VballNetV4c, VballNetGridV3).",
+      "use": "Benchmarked against ours on clicked frames: as good or better overall (GridV3 precision 0.89–0.97), none best everywhere. Candidate ball source for touch detection."
+    },
+    {
+      "name": "fast-volleyball-tracking-inference: RAVEL-VB",
+      "area": "Players",
+      "kind": "ONNX weights + code",
+      "licence": "MIT",
+      "status": "tested",
+      "link": "https://github.com/asigatchov/fast-volleyball-tracking-inference",
+      "what": "Player and ball detector with tracking, runs on the CPU (OpenVINO).",
+      "use": "Compared with YOLO11 on 3 sets: slightly more full-side frames on Kent (19–22% vs 16%) but it collapsed on the 60 fps set (0%, 69 ids per side per rally). Not chosen."
+    },
+    {
+      "name": "Ultralytics YOLO11 + ByteTrack",
+      "area": "Players",
+      "kind": "model + tracker",
+      "licence": "AGPL-3.0 (fine for personal use)",
+      "status": "used",
+      "link": "https://github.com/ultralytics/ultralytics",
+      "what": "General person detector with a multi-object tracker. Not in the reference list.",
+      "use": "Our player tracker on all 11 sets. Weak spots: far-side players hidden behind near ones, and many id switches."
+    },
+    {
+      "name": "SportsMOT",
+      "area": "Players",
+      "kind": "dataset",
+      "licence": "check on sign-up",
+      "status": "next",
+      "link": "https://github.com/MCG-NJU/SportsMOT",
+      "what": "Player tracks (not just boxes) for basketball, volleyball and football: about 29k volleyball frames, with a sports tracker baseline (MixSort).",
+      "use": "Planned for better player tracking (fewer id switches). Needs a CodaLab account: sign up yourself, then Participate → Get Data."
+    },
+    {
+      "name": "VolleyVision (Roboflow sets)",
+      "area": "Players",
+      "kind": "datasets",
+      "licence": "CC BY-NC-ND (README)",
+      "status": "not tried",
+      "link": "https://github.com/shukkkur/VolleyVision",
+      "what": "Player, ball, action and court-segmentation image sets, mostly from other camera angles.",
+      "use": "Not used yet: needs a Roboflow key, and the no-derivatives licence is unclear for training."
+    },
+    {
+      "name": "ddecks beach-volley-vision",
+      "area": "Players",
+      "kind": "code + tools",
+      "licence": "MIT",
+      "status": "not tried",
+      "link": "https://github.com/ddecks/beach-volley-vision",
+      "what": "Beach volleyball pipeline: ball-visibility rally state machine, serve detection, RF-DETR player detector with ByteTrack.",
+      "use": "Not tried. Its RF-DETR + ByteTrack pairing is a candidate in the player-tracking work."
+    },
+    {
+      "name": "Ibrahim et al. Volleyball dataset",
+      "area": "Players",
+      "kind": "dataset",
+      "licence": "check",
+      "status": "not tried",
+      "link": "https://github.com/mostafa-saad/deep-activity-rec",
+      "what": "4,830 broadcast clips with player boxes and 9 individual / 8 group actions.",
+      "use": "Not used: broadcast side view, far from our camera behind the baseline."
+    },
+    {
+      "name": "Court-Keypoint-Detection",
+      "area": "Court",
+      "kind": "code",
+      "licence": "none stated",
+      "status": "not usable",
+      "link": "https://github.com/asigatchov/Court-Keypoint-Detection",
+      "what": "YOLO11 court keypoints trained on back-view gym cameras, the right viewpoint for automatic calibration.",
+      "use": "No published weights, data or licence, so court calibration is clicked by hand (with the magnifier), or drafted from a sister set (vball courtcopy)."
+    },
+    {
+      "name": "Roboflow single-image ball sets",
+      "area": "Ball",
+      "kind": "datasets",
+      "licence": "mostly CC BY 4.0",
+      "status": "not usable",
+      "link": "https://universe.roboflow.com/",
+      "what": "Ball boxes on single images.",
+      "use": "Our tracker needs consecutive frames, so single images cannot train it."
+    },
+    {
+      "name": "WASB (Widely Applicable Strong Baseline)",
+      "area": "Ball",
+      "kind": "code + data",
+      "licence": "see repo",
+      "status": "not tried",
+      "link": "https://github.com/nttcom/WASB-SBDT",
+      "what": "Small-ball detection baseline across 5 sports, including volleyball.",
+      "use": "Not tried; our tracker plus VballNet already cover the ball."
+    },
+    {
+      "name": "VNL-STES",
+      "area": "Actions",
+      "kind": "dataset + code",
+      "licence": "with Volleyball World permission",
+      "status": "not tried",
+      "link": "https://github.com/hoangqnguyen/spot",
+      "what": "6,137 frame-accurate events (serve, receive, set, spike, block, score) in 1,028 broadcast rallies.",
+      "use": "Kept for touch and action detection (phase 2c)."
+    },
+    {
+      "name": "MultiSports (volleyball subset)",
+      "area": "Actions",
+      "kind": "dataset",
+      "licence": "gated",
+      "status": "not tried",
+      "link": "https://deeperaction.github.io/datasets/multisports.html",
+      "what": "12 volleyball action classes with player tubes, broadcast view.",
+      "use": "Kept for action detection (phase 2c)."
+    },
+    {
+      "name": "TU Graz Volleyball Activity 2014",
+      "area": "Actions",
+      "kind": "dataset",
+      "licence": "cite papers",
+      "status": "not tried",
+      "link": "https://tugraz.at/index.php?id=17751",
+      "what": "7 action classes with player boxes per frame.",
+      "use": "Kept for action detection (phase 2c)."
+    },
+    {
+      "name": "VREN",
+      "area": "Actions",
+      "kind": "dataset",
+      "licence": "check",
+      "status": "not tried",
+      "link": "https://github.com/haotianxia/VREN",
+      "what": "Rally notation (actions and locations) for pro and NCAA matches.",
+      "use": "Kept for rally-level stats ideas."
+    },
+    {
+      "name": "openvolley pydatavolley / ovscout2",
+      "area": "Scouting",
+      "kind": "library + app",
+      "licence": "MIT (ovscout2)",
+      "status": "not tried",
+      "link": "https://github.com/openvolley/ovscout2",
+      "what": "Read and create DataVolley scouting files from a fixed-camera video.",
+      "use": "A way to turn scouting into weak labels for actions, if you ever scout a match."
+    },
+    {
+      "name": "T-DEED, E2E-Spot, VideoMAE",
+      "area": "Actions",
+      "kind": "model code",
+      "licence": "see repos",
+      "status": "not tried",
+      "link": "https://github.com/arturxe2/T-DEED",
+      "what": "Precise event-spotting and video-clip models.",
+      "use": "Candidates for touch / action spotting in phase 2c."
+    },
+    {
+      "name": "passform",
+      "area": "Actions",
+      "kind": "code",
+      "licence": "see repo",
+      "status": "not tried",
+      "link": "https://github.com/williamyen042/passform",
+      "what": "Ball trajectory turn → contact frame → nearest player = passer, then pose angles.",
+      "use": "The contact-frame idea matches our 3D flight splitting; planned for touch attribution."
+    }
+  ]
+}
