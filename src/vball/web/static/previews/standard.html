@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>vball · Preview: Category standard</title>
+  <style>
+    /* Static look-only preview of the category standard: a Hudl/Balltime-style analytics dashboard (not the live app). */
+    :root { --bg: #f6f7f9; --card: #ffffff; --ink: #0f172a; --soft: #64748b; --line: #e2e8f0; --blue: #2563eb; --blue-50: #eff6ff; --green: #16a34a; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.5 "Segoe UI", system-ui, sans-serif; display: grid; grid-template-columns: 220px 1fr; grid-template-rows: auto 1fr; min-height: 100vh; }
+    .note { grid-column: 1 / -1; background: var(--blue-50); color: var(--blue); padding: 8px 20px; font-weight: 600; font-size: 13px; border-bottom: 1px solid #bfdbfe; }
+    nav { background: var(--card); border-right: 1px solid var(--line); padding: 18px 12px; }
+    nav b { display: block; font-size: 18px; padding: 0 10px 18px; }
+    nav a { display: block; padding: 8px 10px; border-radius: 8px; color: var(--soft); text-decoration: none; font-weight: 600; }
+    nav a.on { background: var(--blue-50); color: var(--blue); }
+    nav small { display: block; padding: 18px 10px 6px; color: var(--soft); font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; }
+    main { padding: 22px 26px; display: grid; grid-template-columns: 1fr 340px; gap: 18px; align-content: start; }
+    .head { grid-column: 1 / -1; display: flex; align-items: center; gap: 12px; }
+    .head h1 { font-size: 22px; margin: 0; }
+    .head select { margin-left: auto; padding: 7px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); font: inherit; }
+    .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05); padding: 16px; }
+    .card h2 { margin: 0 0 10px; font-size: 15px; }
+    .video img { width: 100%; display: block; border-radius: 8px; }
+    .bar { height: 10px; margin: 12px 0; border-radius: 6px; background: var(--line);
+      background-image: repeating-linear-gradient(90deg, var(--blue) 0 8px, transparent 8px 26px); }
+    .btns { display: flex; flex-wrap: wrap; gap: 8px; }
+    .btns span { padding: 7px 12px; border-radius: 8px; border: 1px solid var(--line); font-weight: 600; }
+    .btns span.p { background: var(--blue); border-color: var(--blue); color: #fff; }
+    .row { display: grid; grid-template-columns: 30px 1fr auto; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+    .row:last-child { border-bottom: 0; }
+    .row .n { color: var(--soft); }
+    .pill { font-size: 12px; font-weight: 600; color: var(--green); background: #dcfce7; padding: 1px 8px; border-radius: 999px; }
+    .kpis { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; }
+    .kpis .card small { color: var(--soft); }
+    .kpis .card div { font-size: 26px; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <div class="note">Preview only: the category standard (a Hudl / Balltime-style analytics dashboard) drawn around a real Kent set 2 frame. Not the live app; buttons do nothing.</div>
+  <nav>
+    <b>vball</b>
+    <a class="on" href="#">Viewer</a><a href="#">Ball check</a><a href="#">Stats</a><a href="#">Sources</a>
+    <small>Imperial M2</small><a href="#">Kent</a><a href="#">Brunel home</a><a href="#">Brunel away</a>
+  </nav>
+  <main>
+    <div class="head"><h1>Kent set 2</h1><select><option>#2 Kent set 2 (42 rallies)</option></select></div>
+    <div class="kpis">
+      <div class="card"><small>Rallies</small><div>40</div></div>
+      <div class="card"><small>Average rally</small><div>9.6 s</div></div>
+      <div class="card"><small>Serves measured</small><div>22 / 38</div></div>
+      <div class="card"><small>Hardest serve</small><div>91 km/h</div></div>
+    </div>
+    <section class="card video">
+      <img src="/api/matches/2/frames/20250.jpg" alt="Kent set 2 frame">
+      <div class="bar"></div>
+      <div class="btns"><span>Prev rally</span><span>Next rally</span><span class="p">Mark start</span><span class="p">Mark end</span><span>Undo</span><span class="p">Approve &amp; next</span></div>
+    </section>
+    <section class="card">
+      <h2>Your labels · 40 / 40 approved</h2>
+      <div class="row"><span class="n">1</span><span>1:31.2 – 1:38.3 · 7.2 s</span><span class="pill">Approved</span></div>
+      <div class="row"><span class="n">2</span><span>2:01.4 – 2:06.1 · 4.7 s</span><span class="pill">Approved</span></div>
+      <div class="row"><span class="n">3</span><span>2:21.1 – 2:49.8 · 28.8 s</span><span class="pill">Approved</span></div>
+      <div class="row"><span class="n">4</span><span>3:13.3 – 3:16.6 · 3.3 s</span><span class="pill">Approved</span></div>
+      <div class="row"><span class="n">5</span><span>3:32.4 – 3:35.8 · 3.4 s</span><span class="pill">Approved</span></div>
+      <div class="row"><span class="n">6</span><span>3:51.0 – 4:20.4 · 29.3 s</span><span class="pill">Approved</span></div>
+    </section>
+  </main>
+</body>
+</html>
