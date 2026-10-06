@@ -63,6 +63,7 @@ async function selectMatch(id) {
   loadBall(id);
   loadCourt(id);
   loadFlights(id);
+  loadServing(id);
   playerChunks = new Map();
   playersMissing = false;
   calib = null;
@@ -449,8 +450,108 @@ function renderLive() {
   const showMsg = message.text && Date.now() < message.until;
   msg.textContent = showMsg ? message.text : "";
   msg.className = `message ${showMsg ? message.kind : ""}`;
+  renderServe();
 }
 setInterval(renderLive, 250); // keeps the status fresh while paused and lets messages expire
+
+// ---------- serving end, serve result, score ----------
+
+let serving = null; // GET /serving response: {rallies: [...], our_side, serve_fix, ...}
+let servingProblem = null;
+const OTHER_END = { near: "far", far: "near" };
+const OUTCOME_CYCLE = [null, "ace", "error", "in"]; // O: automatic -> ace -> error -> in -> automatic
+const OUTCOME_TEXT = { ace: "ace", error: "serve error", in: "in (played)", check: "check: ace, error or in?" };
+
+async function loadServing(id) {
+  serving = null;
+  servingProblem = null;
+  try {
+    const res = await fetch(`/api/matches/${id}/serving`);
+    if (id !== matchId) return;
+    if (res.ok) serving = await res.json();
+    else servingProblem = (await res.json().catch(() => ({}))).detail || `HTTP ${res.status}`;
+  } catch (err) {
+    servingProblem = err.message;
+  }
+  renderServe();
+}
+
+function servingAt(t) {
+  if (!serving) return -1;
+  let found = -1;
+  serving.rallies.forEach((r, i) => {
+    if (t >= r.start_s - 1.5 && t <= r.end_s + 2) found = i;
+  });
+  return found;
+}
+
+function endName(end) {
+  if (!end) return "unknown end";
+  const who = serving.our_side ? (end === serving.our_side ? " (us)" : " (them)") : "";
+  return `<span class="end-${end}">${end} end${who}</span>`;
+}
+
+function renderServe() {
+  const line = $("#serve-line");
+  const i = servingAt(video.currentTime);
+  line.hidden = !serving || i < 0;
+  if (line.hidden) return;
+  const r = serving.rallies[i];
+  const us = serving.our_side;
+  const score = us
+    ? `us ${r[`score_${us}`]} – ${r[`score_${OTHER_END[us]}`]} them`
+    : `near ${r.score_near} – ${r.score_far} far`;
+  const outcome = `<span class="${r.outcome === "check" ? "check" : ""}">${OUTCOME_TEXT[r.outcome]}</span>`;
+  const fixed = (on) => (on ? ` <span class="fixed" title="set by you">✓</span>` : "");
+  const by = r.server ? ` by <b>${r.server.replace(/[&<>"]/g, (c) => `&#${c.charCodeAt(0)};`)}</b>` : "";
+  const speed = r.speed_kmh ? ` · ${Math.round(r.speed_kmh)} km/h` : "";
+  $("#serve-text").innerHTML =
+    `Rally ${i + 1} · served from the ${endName(r.end)}${fixed(r.end_fixed)}${by} · ${outcome}${fixed(!!r.outcome_fixed)}` +
+    `${speed} · score after: <b>${score}</b>`;
+}
+
+async function saveServeFix(i, change) {
+  const r = serving.rallies[i];
+  const fixes = structuredClone(serving.serve_fix || {});
+  const fix = { ...(fixes[r.fix_key] || {}), ...change };
+  for (const k of Object.keys(fix)) if (fix[k] == null) delete fix[k];
+  fixes[r.fix_key] = fix;
+  const res = await fetch(`/api/matches/${matchId}/meta`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ serve_fix: fixes }),
+  });
+  if (!res.ok) {
+    say(`Couldn't save the serve fix (HTTP ${res.status}); restart the server if it is older than this page.`, "warn");
+    return;
+  }
+  await loadServing(matchId);
+}
+
+function serveTarget() {
+  if (!serving) {
+    say(servingProblem ? `No serving ends: ${servingProblem}` : "Serving ends are still loading.", "warn");
+    return -1;
+  }
+  const i = servingAt(video.currentTime);
+  if (i < 0) say("Not inside a rally: play a rally to fix its serve.", "warn");
+  return i;
+}
+
+function flipServeEnd() {
+  const i = serveTarget();
+  if (i < 0) return;
+  const r = serving.rallies[i];
+  const end = OTHER_END[r.end] || (r.end_auto === "far" ? "near" : "far");
+  saveServeFix(i, { end: end === r.end_auto ? null : end });
+}
+
+function cycleServeOutcome() {
+  const i = serveTarget();
+  if (i < 0) return;
+  const next = OUTCOME_CYCLE[(OUTCOME_CYCLE.indexOf(serving.rallies[i].outcome_fixed) + 1) % OUTCOME_CYCLE.length];
+  saveServeFix(i, { outcome: next });
+}
 
 // ---------- overlay ----------
 
@@ -959,6 +1060,8 @@ bind("#btn-cancel", cancelStart);
 bind("#btn-undo", undo);
 bind("#btn-approve", approveAndNext);
 bind("#btn-import", importDetected);
+bind("#btn-serve-end", flipServeEnd);
+bind("#btn-serve-outcome", cycleServeOutcome);
 
 $("#timeline").onclick = (e) => {
   const rect = e.currentTarget.getBoundingClientRect();
@@ -975,6 +1078,8 @@ document.addEventListener("keydown", (e) => {
     e: markEnd,
     a: approveAndNext,
     u: undo,
+    v: flipServeEnd,
+    o: cycleServeOutcome,
     escape: cancelStart,
   };
   const action = actions[e.key.toLowerCase()];

@@ -7,7 +7,7 @@ from pathlib import Path
 
 import numpy as np
 
-from vball import store
+from vball import serving, store
 from vball.ball3d import load_flights
 from vball.config import Paths
 from vball.court import COURT_LENGTH, COURT_WIDTH, NET_Y, load_calibration
@@ -18,8 +18,11 @@ HEAT_X = (-2.0, 11.0)  # metres, 1 m cells: 13 columns
 HEAT_Y = (-4.0, 22.0)  # 26 rows
 
 
+META_DEFAULTS = {"our_side": None, "lineup": [], "serve_fix": {}}
+
+
 def load_meta(path: Path) -> dict:
-    return json.loads(path.read_text(encoding="utf-8")) if path.exists() else {"our_side": None}
+    return {**META_DEFAULTS, **(json.loads(path.read_text(encoding="utf-8")) if path.exists() else {})}
 
 
 def save_meta(path: Path, meta: dict) -> None:
@@ -113,6 +116,38 @@ def match_player_stats(paths: Paths, match_id: int, intervals_s, fps: float) -> 
     return player_stats(players, court_xy, on_court, [(round(s * fps), round(e * fps)) for s, e in intervals_s])
 
 
+def match_serving(paths: Paths, conn: sqlite3.Connection, match_id: int) -> tuple[dict | None, str | None]:
+    """(serving section, None) or (None, what to run): every rally with its serving end, winner, serve outcome, score
+    and server, the team summary and per-player serves. Fixes and the lineup come from meta.json."""
+    path = paths.serving_csv(match_id)
+    if not path.exists():
+        if not paths.players_csv(match_id).exists():
+            return None, f"no player tracks: run uv run vball players {match_id}, then uv run vball serving {match_id}"
+        if not paths.court_json(match_id).exists():
+            return None, f"calibrate the court, then run: uv run vball serving {match_id}"
+        return None, f"run: uv run vball serving {match_id}"
+    match = store.get_match(conn, match_id)
+    intervals, source = rally_intervals(paths, conn, match_id)
+    rows = serving.load_serving(path)
+    if len(rows) != len(intervals) or any(abs(r["start_s"] - s) > 0.05 for r, (s, _) in zip(rows, intervals)):
+        return None, f"the rallies changed since serving.csv was made: run uv run vball serving {match_id}"
+    meta = load_meta(paths.meta_json(match_id))
+    rallies = serving.outcomes(rows, meta["serve_fix"])
+    serving.assign_servers(rallies, meta["our_side"], meta["lineup"])
+    speeds = {}
+    if paths.flights_csv(match_id).exists():
+        for x in classify_flights(load_flights(paths.flights_csv(match_id)), match["fps"])["serves"]:
+            if x["plausible"]:
+                speeds[x["rally"]] = x["speed_kmh"]
+    for i, r in enumerate(rallies):
+        r["speed_kmh"] = speeds.get(i)
+    return {
+        "source": source, "rallies": rallies, "summary": serving.team_summary(rallies),
+        "players": serving.player_serves(rallies, speeds), "lineup": meta["lineup"], "our_side": meta["our_side"],
+        "serve_fix": meta["serve_fix"],
+    }, None
+
+
 def match_stats(paths: Paths, conn: sqlite3.Connection, match_id: int) -> dict:
     """Everything cheap for one match; `missing` says which sections are absent and what to run."""
     match = store.get_match(conn, match_id)
@@ -130,6 +165,13 @@ def match_stats(paths: Paths, conn: sqlite3.Connection, match_id: int) -> dict:
         out["missing"]["flights"] = f"calibrate the court (with the net clicks), then run: uv run vball ball3d {match_id}"
     else:
         out["missing"]["flights"] = f"run: uv run vball ball3d {match_id}"
+    section, missing = match_serving(paths, conn, match_id)
+    if section:
+        out["serving"] = {k: v for k, v in section.items() if k not in ("rallies", "serve_fix")}
+        last = section["rallies"][-1] if section["rallies"] else None
+        out["serving"]["score"] = {"near": last["score_near"], "far": last["score_far"]} if last else None
+    else:
+        out["missing"]["serving"] = missing
     return out
 
 

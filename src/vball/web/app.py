@@ -42,8 +42,17 @@ class CourtPoint(BaseModel):
     y: float
 
 
+class ServeFix(BaseModel):
+    end: Literal["near", "far"] | None = None
+    outcome: Literal["ace", "error", "in"] | None = None
+
+
 class MetaBody(BaseModel):
+    """Only the fields sent are changed."""
+
     our_side: Literal["near", "far"] | None = None
+    lineup: list[str] | None = None
+    serve_fix: dict[str, ServeFix] | None = None
 
 
 class CourtBody(BaseModel):
@@ -251,8 +260,26 @@ def create_app(paths: Paths) -> FastAPI:
     @app.put("/api/matches/{match_id}/meta")
     def put_meta(match_id: int, body: MetaBody, conn: sqlite3.Connection = Depends(db)) -> dict:
         require_match(conn, match_id)
-        stats.save_meta(paths.meta_json(match_id), {"our_side": body.our_side})
+        meta = stats.load_meta(paths.meta_json(match_id))
+        changes = body.model_dump(exclude_unset=True)
+        if "lineup" in changes:
+            changes["lineup"] = [n.strip() for n in changes["lineup"] or [] if n.strip()]
+        if "serve_fix" in changes:
+            changes["serve_fix"] = {
+                k: {f: v for f, v in fix.items() if v is not None}
+                for k, fix in (changes["serve_fix"] or {}).items()
+                if any(v is not None for v in fix.values())
+            }
+        stats.save_meta(paths.meta_json(match_id), {**meta, **changes})
         return stats.load_meta(paths.meta_json(match_id))
+
+    @app.get("/api/matches/{match_id}/serving")
+    def get_serving(match_id: int, conn: sqlite3.Connection = Depends(db)) -> dict:
+        require_match(conn, match_id)
+        section, missing = stats.match_serving(paths, conn, match_id)
+        if section is None:
+            raise HTTPException(status_code=404, detail=missing)
+        return section
 
     @app.get("/api/matches/{match_id}/frames/{frame}.jpg")
     def get_frame(match_id: int, frame: int, conn: sqlite3.Connection = Depends(db)) -> Response:

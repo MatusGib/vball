@@ -9,6 +9,7 @@ BASE_TRACKNET_WEIGHTS = MODELS_DIR / "tracknet_volleyball.pt"  # downloaded beac
 # Fine-tuned on our indoor footage (vball finetune, docs/results/phase2a-ball.md); not in git, rebuild with:
 # vball finetune --matches 1 3 4 5 6 7 8 9 10 --out models/tracknet_vball_v1.pt --rebuild-cache
 TRACKNET_WEIGHTS = MODELS_DIR / "tracknet_vball_v1.pt"
+ACTIONS_WEIGHTS = MODELS_DIR / "volleyvision" / "actions_yv8m.pt"  # VolleyVision YOLOv8m action detector
 TRACKNET_THRESHOLD = 0.3  # heatmap value above which TrackNet reports a ball (chosen in phase 2a)
 
 
@@ -56,6 +57,14 @@ class Paths:
     def flights_csv(self, match_id: int) -> Path:
         """3D ball flights (vball ball3d)."""
         return self.match_dir(match_id) / "flights.csv"
+
+    def serving_csv(self, match_id: int) -> Path:
+        """Serving end and serve time per rally (vball serving)."""
+        return self.match_dir(match_id) / "serving.csv"
+
+    def actions_csv(self, match_id: int) -> Path:
+        """Action detector boxes after each serve (vball serving)."""
+        return self.match_dir(match_id) / "actions.csv"
 
     def meta_json(self, match_id: int) -> Path:
         """Per-match settings, e.g. which end our team plays (stats page)."""

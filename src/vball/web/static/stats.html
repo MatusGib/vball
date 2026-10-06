@@ -24,6 +24,26 @@
     <p id="load-state" class="help">Loading…</p>
     <section id="tiles" class="sheet kit" aria-label="Headline numbers"></section>
 
+    <section id="serving" class="kit serving" hidden>
+      <div class="section-head">
+        <h2>Score and serves</h2>
+        <span class="help">Who won each rally comes from who served the next one; fix a serve in the viewer with <kbd>V</kbd> (other end served) and <kbd>O</kbd> (ace, error, in).</span>
+      </div>
+      <div class="serving-body">
+        <div class="board"><table id="serving-teams"></table></div>
+        <div id="servers" class="board" hidden>
+          <h3>Our servers</h3>
+          <form id="lineup-form" class="lineup">
+            <label for="lineup">Serving order, first server of the set first</label>
+            <input id="lineup" type="text" placeholder="e.g. 14, 25, 33, 36, 41, 7" autocomplete="off">
+            <button class="small" type="submit">Save order</button>
+          </form>
+          <table id="serving-players"></table>
+        </div>
+      </div>
+      <ul id="serving-notes" class="serving-notes"></ul>
+    </section>
+
     <div class="stats-body">
     <section id="sides" class="kit" hidden>
       <div class="section-head">

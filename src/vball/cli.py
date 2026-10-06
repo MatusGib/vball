@@ -8,7 +8,7 @@ from vball.ball.metrics import ball_metrics, tolerance_px
 from vball.ball.testset import load_ball_test
 from vball.ball.track import load_tracknet_csv
 from vball.ball.tracknet import run_tracknet
-from vball.config import BASE_TRACKNET_WEIGHTS, TRACKNET_THRESHOLD, TRACKNET_WEIGHTS, default_paths
+from vball.config import ACTIONS_WEIGHTS, BASE_TRACKNET_WEIGHTS, TRACKNET_THRESHOLD, TRACKNET_WEIGHTS, default_paths
 from vball.court import load_calibration
 from vball.serve import ServeParams
 from vball.evaluate import rally_metrics, restrict_to_span, visible_fraction
@@ -97,6 +97,10 @@ def build_parser() -> argparse.ArgumentParser:
     b3 = sub.add_parser("ball3d", help="fit 3D ball flights in every rally; writes flights.csv")
     b3.add_argument("match_id", type=int)
     b3.add_argument("--noise-px", type=float, default=6.0)
+
+    sv = sub.add_parser("serving", help="which end served each rally (+ receive check); writes serving.csv")
+    sv.add_argument("match_id", type=int)
+    sv.add_argument("--no-actions", action="store_true", help="skip the action detector (receive check)")
 
     s = sub.add_parser("serve", help="start the web app")
     s.add_argument("--port", type=int, default=8000)
@@ -264,6 +268,41 @@ def main(argv: list[str] | None = None) -> int:
             else:
                 rallies = [(r["start_frame"], r["end_frame"]) for r in store.get_rallies(conn, args.match_id)]
             print(pl_mod.player_stats(players, cal, rallies).summary())
+
+        elif args.command == "serving":
+            from vball import serving
+            from vball.stats import rally_intervals
+
+            for need, what in ((paths.court_json(args.match_id), "calibrate the court first (viewer: Calibrate court)"),
+                               (paths.players_csv(args.match_id), f"run first: uv run vball players {args.match_id}")):
+                if not need.exists():
+                    print(what, file=sys.stderr)
+                    return 1
+            fps = match["fps"]
+            cal = load_calibration(paths.court_json(args.match_id))
+            players = pl_mod.load_players(paths.players_csv(args.match_id))
+            order = players.frame.argsort(kind="stable")
+            players = pl_mod.Players(players.frame[order], players.track_id[order], players.box[order],
+                                     players.score[order])
+            court_xy = pl_mod.feet_to_court(players.frame, players.box, cal)
+            track = load_tracknet_csv(paths.ball_csv(args.match_id), match["n_frames"])
+            intervals, source = rally_intervals(paths, conn, args.match_id)
+            rows = serving.match_serving(intervals, track, players, court_xy, fps)
+            if not args.no_actions and ACTIONS_WEIGHTS.exists():
+                print(f"action detector on {len(rows)} serves...")
+                actions = serving.detect_actions(paths.work_video(args.match_id), serving.action_windows(rows, fps),
+                                                 cal, ACTIONS_WEIGHTS, every=max(1, round(fps / 15)))
+                serving.save_actions(paths.actions_csv(args.match_id), actions)
+                serving.mark_defense(rows, actions, fps)
+            elif not args.no_actions:
+                print(f"no action detector at {ACTIONS_WEIGHTS}: receive check skipped")
+            serving.save_serving(paths.serving_csv(args.match_id), rows)
+            how = [r["how"] for r in rows]
+            ends = "".join({"near": "N", "far": "F"}.get(r["end"], "?") for r in rows)
+            print(f"{len(rows)} rallies ({source}): contact {how.count('contact')}, count {how.count('count')}, "
+                  f"unknown {how.count('none')}")
+            print(f"serving ends: {ends}")
+            print(f"wrote {paths.serving_csv(args.match_id)}")
 
         elif args.command in ("camera", "ball3dsim", "ball3d"):
             from vball import ball3d, ball3d_sim  # scipy-heavy; imported only when needed

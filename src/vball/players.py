@@ -99,19 +99,25 @@ def team_sides(track_id: np.ndarray, side: np.ndarray, on_court: np.ndarray) -> 
     return team[inverse], player[inverse]
 
 
-def with_court(players: Players, cal: Calibration) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """Court (x, y) of each player's feet (bottom-centre of the box), side (0 near, 1 far) and on-court flag, both
-    per track rather than per frame (team_sides)."""
-    feet = np.stack([(players.box[:, 0] + players.box[:, 2]) / 2, players.box[:, 3]], axis=1)
+def feet_to_court(frame: np.ndarray, box: np.ndarray, cal: Calibration) -> np.ndarray:
+    """Court (x, y) in metres of the bottom-centre of each box (feet), using the camera segment of its frame."""
+    feet = np.stack([(box[:, 0] + box[:, 2]) / 2, box[:, 3]], axis=1)
     court_xy = np.zeros_like(feet)
     segments = cal.segments or [Segment(0, 1 << 62, np.eye(3))]
     for i, seg in enumerate(segments):
         # same rule as Calibration.segment_at: frames before the first / after the last segment use those
         start = -np.inf if i == 0 else seg.start_frame
         end = np.inf if i == len(segments) - 1 else seg.end_frame
-        rows = (players.frame >= start) & (players.frame < end)
+        rows = (frame >= start) & (frame < end)
         if rows.any():
             court_xy[rows] = apply_h(cal.image_to_court @ np.linalg.inv(seg.ref_to_frame), feet[rows])
+    return court_xy
+
+
+def with_court(players: Players, cal: Calibration) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Court (x, y) of each player's feet (bottom-centre of the box), side (0 near, 1 far) and on-court flag, both
+    per track rather than per frame (team_sides)."""
+    court_xy = feet_to_court(players.frame, players.box, cal)
     side = (court_xy[:, 1] >= NET_Y).astype(int)
     on_court = (
         (court_xy[:, 0] >= ON_COURT_X[0]) & (court_xy[:, 0] <= ON_COURT_X[1])

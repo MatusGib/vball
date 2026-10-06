@@ -57,9 +57,9 @@ def test_leaderboards_rank_plausible_items_across_matches():
 
 
 def test_meta_defaults_and_round_trip(tmp_path):
-    assert load_meta(tmp_path / "meta.json") == {"our_side": None}
-    save_meta(tmp_path / "meta.json", {"our_side": "far"})
-    assert load_meta(tmp_path / "meta.json") == {"our_side": "far"}
+    assert load_meta(tmp_path / "meta.json") == {"our_side": None, "lineup": [], "serve_fix": {}}
+    save_meta(tmp_path / "meta.json", {"our_side": "far"})  # older files have only our_side
+    assert load_meta(tmp_path / "meta.json") == {"our_side": "far", "lineup": [], "serve_fix": {}}
 
 
 def test_physically_impossible_flights_are_not_plausible():

@@ -131,6 +131,122 @@ function renderMissing(matches) {
   $("#missing").innerHTML = items.join("") || "<li>Nothing missing.</li>";
 }
 
+// ---------- score and serves ----------
+
+let servingDetail = null; // GET /api/matches/{id}/serving for the picked match
+const pct = (v) => (v == null ? "–" : `${Math.round(v * 100)}%`);
+const OTHER = { near: "far", far: "near" };
+
+function teamsFirst(ourSide) {
+  return ourSide ? [ourSide, OTHER[ourSide]] : ["near", "far"];
+}
+
+function scoreText(m) {
+  const sc = m.serving?.score;
+  if (!sc) return "–";
+  const [a, b] = teamsFirst(m.our_side);
+  return `${sc[a]}–${sc[b]}`;
+}
+
+function renderServing(matches) {
+  const withData = matches.filter((m) => m.serving);
+  $("#serving").hidden = !withData.length;
+  if (!withData.length) return;
+  const one = matches.length === 1 ? matches[0] : null;
+  const notes = [];
+  if (one) {
+    const s = one.serving.summary;
+    const head = ["Team", "Points", "Serves", "Won on serve", "Aces", "Serve errors", "Serving %", "Side-out %"];
+    $("#serving-teams").innerHTML =
+      `<thead><tr>${head.map((h) => `<th>${h}</th>`).join("")}</tr></thead><tbody>` +
+      teamsFirst(one.our_side)
+        .map((side) => {
+          const t = s[side];
+          return `<tr><td class="team-${side}">${sideLabel(side, one.our_side)}</td><td>${t.points}</td><td>${t.serves}</td>
+            <td>${t.won_on_serve}</td><td>${t.aces}</td><td>${t.errors}</td><td>${pct(t.serving_pct)}</td><td>${pct(t.sideout_pct)}</td></tr>`;
+        })
+        .join("") +
+      "</tbody>";
+    renderServers(one);
+    if (one.serving.source !== "labels")
+      notes.push(`<li class="warn">These rallies are detected, not labelled: a false rally adds a point. Approve the labels in the viewer for a true score.</li>`);
+    const todo = servingDetail?.id === one.id
+      ? servingDetail.rallies.map((r, i) => ({ ...r, i })).filter((r) => r.outcome === "check" || !r.end)
+      : [];
+    if (todo.length)
+      notes.push(
+        `<li class="warn">${todo.length} serve${todo.length > 1 ? "s" : ""} to check (not counted as ace or error): ` +
+          todo.map((r) => `<a href="${viewerLink(one.id, r.start_s)}">#${r.i + 1} ${mmss(r.start_s)}</a>`).join(", ") +
+          "</li>",
+      );
+    if (s.unknown_winner)
+      notes.push(`<li>${s.unknown_winner} rall${s.unknown_winner > 1 ? "ies have" : "y has"} no known winner (the next serving end is unknown, or the set didn't end on camera).</li>`);
+    if (!one.our_side) notes.push(`<li>Set which end is our team (below) to see us / them and our servers.</li>`);
+  } else {
+    $("#servers").hidden = true;
+    const head = ["Match", "Score", "Aces", "Serve errors", "Side-out %", "To check"];
+    $("#serving-teams").innerHTML =
+      `<thead><tr>${head.map((h) => `<th>${h}</th>`).join("")}</tr></thead><tbody>` +
+      withData
+        .map((m) => {
+          const [a, b] = teamsFirst(m.our_side);
+          const s = m.serving.summary;
+          const two = (k, f = (v) => v) => `${f(s[a][k])} / ${f(s[b][k])}`;
+          const href = `?match=${m.id}`;
+          return `<tr data-href="${href}"><td><a href="${href}">#${m.id} ${esc(m.name)}</a></td><td>${scoreText(m)}</td>
+            <td>${two("aces")}</td><td>${two("errors")}</td><td>${two("sideout_pct", pct)}</td><td>${s.check}</td></tr>`;
+        })
+        .join("") +
+      "</tbody>";
+    notes.push(`<li>Pairs are us / them where the team's end is set, otherwise near / far. Pick a match for the details.</li>`);
+  }
+  $("#serving-notes").innerHTML = notes.join("");
+}
+
+function renderServers(m) {
+  $("#servers").hidden = !m.our_side;
+  if (!m.our_side) return;
+  const input = $("#lineup");
+  if (document.activeElement !== input) input.value = (m.serving.lineup || []).join(", ");
+  const rows = m.serving.players || [];
+  if (!rows.length) {
+    $("#serving-players").innerHTML = `<tbody><tr><td class="empty">Type the serving order to split our serves by player. Substitutions are not followed.</td></tr></tbody>`;
+    return;
+  }
+  const head = ["Player", "Serves", "Aces", "Errors", "Serving %", "Top", "Median", "To check"];
+  const kmh = (v) => (v == null ? "–" : `${Math.round(v)} km/h`);
+  $("#serving-players").innerHTML =
+    `<thead><tr>${head.map((h) => `<th>${h}</th>`).join("")}</tr></thead><tbody>` +
+    rows
+      .map((p) => `<tr><td>${esc(p.name)}</td><td>${p.serves}</td><td>${p.aces}</td><td>${p.errors}</td><td>${pct(p.serving_pct)}</td>
+        <td>${kmh(p.top_kmh)}</td><td title="${p.measured} of ${p.serves} serves measured in 3D">${kmh(p.median_kmh)}</td><td>${p.check}</td></tr>`)
+      .join("") +
+    "</tbody>";
+}
+
+$("#lineup-form").onsubmit = async (e) => {
+  e.preventDefault();
+  const m = picked();
+  const lineup = $("#lineup").value.split(/[,;]/).map((s) => s.trim()).filter(Boolean);
+  await getJson(`/api/matches/${m.id}/meta`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ lineup }),
+  });
+  $("#lineup").blur();
+  await refreshMatch(m.id);
+};
+
+// one match's numbers changed (our end, lineup): reload them without leaving the page
+async function refreshMatch(id) {
+  const fresh = await getJson(`/api/matches/${id}/stats`);
+  const i = all.matches.findIndex((m) => m.id === id);
+  all.matches[i] = { ...all.matches[i], ...fresh };
+  detail = null;
+  servingDetail = null;
+  render();
+}
+
 // ---------- side heat maps ----------
 
 const CELL = 24; // px per metre: the court fills its panel
@@ -233,7 +349,16 @@ async function render() {
   renderTiles(matches);
   renderBoards(matches);
   renderMissing(matches);
+  renderServing(matches);
   renderSides();
+  if (m?.serving && servingDetail?.id !== m.id) {
+    getJson(`/api/matches/${m.id}/serving`)
+      .then((body) => {
+        servingDetail = { ...body, id: m.id };
+        if (picked()?.id === m.id) renderServing([m]);
+      })
+      .catch(() => {});
+  }
   if (m && (!detail || detail.id !== m.id)) {
     try {
       detail = await getJson(`/api/matches/${m.id}/stats`);
@@ -254,7 +379,7 @@ for (const b of document.querySelectorAll(".side-switch button")) {
     });
     m.our_side = meta.our_side;
     if (detail) detail.our_side = meta.our_side;
-    render();
+    await refreshMatch(m.id); // servers and us / them depend on our end
   };
 }
 

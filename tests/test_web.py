@@ -257,8 +257,41 @@ def test_stats_without_flights_says_what_to_run(tmp_path):
 def test_meta_sets_our_side(tmp_path):
     client, match_id = make_client(tmp_path)
     assert client.put(f"/api/matches/{match_id}/meta", json={"our_side": "middle"}).status_code == 422
-    assert client.put(f"/api/matches/{match_id}/meta", json={"our_side": "near"}).json() == {"our_side": "near"}
+    assert client.put(f"/api/matches/{match_id}/meta", json={"our_side": "near"}).json()["our_side"] == "near"
     assert client.get(f"/api/matches/{match_id}/stats").json()["our_side"] == "near"
+
+
+def test_meta_changes_only_the_fields_sent(tmp_path):
+    client, match_id = make_client(tmp_path)
+    url = f"/api/matches/{match_id}/meta"
+    client.put(url, json={"our_side": "far"})
+    meta = client.put(url, json={"lineup": [" 14", "", "25 "], "serve_fix": {"1.0": {"end": "near"}, "15.0": {}}}).json()
+    assert meta == {"our_side": "far", "lineup": ["14", "25"], "serve_fix": {"1.0": {"end": "near"}}}
+    assert client.put(url, json={"serve_fix": {"1.0": {"outcome": "bad"}}}).status_code == 422
+
+
+def test_serving_needs_the_command_then_applies_fixes(tmp_path):
+    from vball import serving
+
+    client, match_id = make_client(tmp_path)
+    url = f"/api/matches/{match_id}/serving"
+    res = client.get(url)
+    assert res.status_code == 404 and "vball players" in res.json()["detail"]
+    paths = Paths(tmp_path / "data")
+    rows = [{"start_s": 1.0, "end_s": 10.0, "end": "near", "how": "contact", "serve_s": 1.2, "defense_near": None,
+             "defense_far": None},
+            {"start_s": 15.0, "end_s": 16.5, "end": "far", "how": "count", "serve_s": 15.0, "defense_near": None,
+             "defense_far": None}]
+    serving.save_serving(paths.serving_csv(match_id), rows)
+    body = client.get(url).json()
+    assert [r["winner"] for r in body["rallies"]] == ["far", None] and body["rallies"][0]["outcome"] == "in"
+    client.put(f"/api/matches/{match_id}/meta", json={"our_side": "near", "lineup": ["14"],
+                                                      "serve_fix": {"15.0": {"end": "near", "outcome": "ace"}}})
+    body = client.get(url).json()
+    assert [r["winner"] for r in body["rallies"]] == ["near", "near"]
+    assert body["rallies"][1]["server"] == "14" and body["players"][0]["aces"] == 1
+    stats = client.get(f"/api/matches/{match_id}/stats").json()
+    assert stats["serving"]["score"] == {"near": 2, "far": 0} and "serving" not in stats["missing"]
 
 
 def test_match_stats_include_side_level_players(tmp_path):
