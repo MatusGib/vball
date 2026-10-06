@@ -7,17 +7,24 @@
   <link rel="stylesheet" href="/style.css">
 </head>
 <body>
-  <header>
-    <h1><a href="/">vball</a> · Stats</h1>
-    <select id="pick" aria-label="Match"></select>
-    <a class="header-link" href="/sources.html">Sources</a>
-    <a href="/">← Viewer</a>
+  <header class="topbar">
+    <h1 class="brand-h"><a class="brand" href="/"><span class="brand-team">Imperial M2</span><span class="brand-name">vball</span></a></h1>
+    <nav class="tabs" aria-label="Pages">
+      <a href="/">Viewer</a>
+      <a href="/ball.html">Ball check</a>
+      <a href="/stats.html" aria-current="page">Stats</a>
+      <a href="/sources.html">Sources</a>
+    </nav>
   </header>
+  <div class="bench">
+    <select id="pick" aria-label="Match"></select>
+    <span class="help">Every row opens the viewer at that moment.</span>
+  </div>
   <main id="stats-root" class="stats">
     <p id="load-state" class="help">Loading…</p>
-    <section id="tiles" class="tiles" aria-label="Headline numbers"></section>
+    <section id="tiles" class="sheet kit" aria-label="Headline numbers"></section>
 
-    <section id="sides" hidden>
+    <section id="sides" class="kit" hidden>
       <div class="section-head">
         <h2>Where each side plays</h2>
         <div class="side-switch" role="group" aria-label="Which end is our team">
@@ -38,29 +45,29 @@
     </section>
 
     <section class="boards">
-      <div class="board">
+      <div class="board kit">
         <h2>Hardest serves</h2>
         <table id="board-serves"></table>
         <p id="serve-note" class="help"></p>
       </div>
-      <div class="board">
+      <div class="board kit">
         <h2>Highest sets</h2>
         <table id="board-sets"></table>
       </div>
-      <div class="board">
+      <div class="board kit">
         <h2>Fastest attacks <span class="badge-exp" title="One camera behind the baseline sees attacks nearly head-on: in simulation the speed is typically 13 km/h off">experimental</span></h2>
         <table id="board-attacks"></table>
         <p class="help">Attack speeds from one camera are rough (typically ±13 km/h in simulation). Click a row to check it on the video.</p>
       </div>
-      <div class="board">
+      <div class="board kit">
         <h2>Longest rallies</h2>
         <table id="board-rallies"></table>
       </div>
     </section>
 
-    <section>
-      <h2>Missing data</h2>
-      <ul id="missing" class="help"></ul>
+    <section class="kit">
+      <h2 style="padding: 4px 16px 0">Missing data</h2>
+      <ul id="missing"></ul>
     </section>
   </main>
   <script src="/stats.js"></script>

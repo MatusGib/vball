@@ -7,10 +7,39 @@
   <link rel="stylesheet" href="/style.css">
 </head>
 <body>
-  <header>
-    <h1>vball</h1>
+  <!--
+  THESIS: the interface is the sports-hall floor the footage was shot on; it refuses the white-card analytics dashboard.
+  OWN-WORLD: maple plank ground, painted court-line colours as the only accents and dividers, near-black kit panels with
+  white condensed lettering like the Imperial shirts; overlay layers keep reserved colours (ball yellow, court cyan,
+  near blue, far red, next step orange).
+  STORY: the owner (with a teammate looking on) watches the set framed by the hall, corrects and approves rallies from the
+  keyboard, and reads every number on a kit panel that links back to the video moment.
+  FIRST VIEWPORT: black team bar with the Imperial M2 tag and page tabs over a white painted line; a bench row of match and
+  layer chips on the maple; inside a painted court boundary, the video large in a kit panel with the rally tape,
+  referee's call and line-tape buttons beneath, and the label and rally panels down the right.
+  FORM: Hall Floor, my #1 of 7 grounded candidates (the pick), seed key 2d7d26a2. Signature moment: approving a label
+  lays a green tape strip across its row.
+  FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance
+  -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="i-prev" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-next" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M4 12.5l5 5L20 6.5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  </svg>
+  <header class="topbar">
+    <h1 class="brand-h"><a class="brand" href="/"><span class="brand-team">Imperial M2</span><span class="brand-name">vball</span></a></h1>
+    <nav class="tabs" aria-label="Pages">
+      <a href="/" aria-current="page">Viewer</a>
+      <a href="/ball.html" title="Click the ball in sampled frames to score the ball tracker">Ball check</a>
+      <a href="/stats.html" title="Hardest serves, highest sets, longest rallies, where each side plays">Stats</a>
+      <a href="/sources.html" title="External data, models and tools, and what vball did with each">Sources</a>
+    </nav>
+  </header>
+  <div class="bench">
     <select id="match" aria-label="Match"></select>
-    <label title="Jump straight to the next detected rally when one ends"><input type="checkbox" id="continuous" checked> Rallies only</label>
+    <label class="chip" title="Jump straight to the next detected rally when one ends"><input type="checkbox" id="continuous" checked> Rallies only</label>
     <label>Speed
       <select id="speed">
         <option value="1">1×</option>
@@ -18,23 +47,20 @@
         <option value="2">2×</option>
       </select>
     </label>
-    <label title="Draw the tracked ball and its last 8 positions on the video"><input type="checkbox" id="show-ball"> Show ball</label>
-    <label title="Draw the calibrated court lines on the video"><input type="checkbox" id="show-court"> Show court</label>
-    <label title="Draw player boxes with track ids and a top-down court map"><input type="checkbox" id="show-players"> Show players</label>
-    <label title="Fitted 3D ball flights: the arc and the ball's speed and height, frame by frame (run vball ball3d first)"><input type="checkbox" id="show-speed"> Show speed</label>
-    <a class="header-link" href="/ball.html" title="Click the ball in sampled frames to score the ball tracker">Ball check →</a>
-    <a class="header-link" href="/stats.html" title="Hardest serves, highest sets, longest rallies, where each side plays">Stats →</a>
-    <a href="/sources.html" title="External data, models and tools, and what vball did with each">Sources</a>
-  </header>
+    <label class="chip" title="Draw the tracked ball and its last 8 positions on the video"><input type="checkbox" id="show-ball"><span class="swatch" style="background: var(--ball)"></span>Ball</label>
+    <label class="chip" title="Draw the calibrated court lines and net on the video"><input type="checkbox" id="show-court"><span class="swatch" style="background: var(--court)"></span>Court</label>
+    <label class="chip" title="Draw player boxes with track ids and a top-down court map"><input type="checkbox" id="show-players"><span class="swatch" style="background: linear-gradient(90deg, var(--near) 50%, var(--far) 50%)"></span>Players</label>
+    <label class="chip" title="Fitted 3D ball flights: the arc and the ball's speed and height, frame by frame (run vball ball3d first)"><input type="checkbox" id="show-speed"><span class="swatch" style="background: var(--ball)"></span>Speed</label>
+  </div>
   <main>
-    <section class="player">
+    <section class="player kit">
       <div class="video-wrap">
         <video id="video" controls preload="metadata"></video>
         <canvas id="overlay" class="overlay" aria-hidden="true"></canvas>
         <canvas id="minimap" class="minimap" width="120" height="220" hidden aria-label="Top-down court map"></canvas>
         <canvas id="loupe" class="loupe" hidden aria-hidden="true"></canvas>
       </div>
-      <div id="timeline" class="timeline" title="Click to jump. Blue: detected rallies. Green: your labels. Red: rally being recorded.">
+      <div id="timeline" class="timeline" title="Click to jump. Blue: detected rallies. Green: approved labels. Orange: labels to check. Red: rally being recorded.">
         <div id="tl-detected" class="tl-row tl-detected"></div>
         <div id="tl-labels" class="tl-row tl-labels"></div>
         <div id="tl-head" class="tl-head"></div>
@@ -44,41 +70,43 @@
         <span id="message" class="message"></span>
       </div>
       <div class="controls">
-        <button id="btn-prev" title="Restart the current detected rally, or go to the one before (P)">◀ Prev rally <kbd>P</kbd></button>
-        <button id="btn-next" title="Next detected rally after the playhead (N)">Next rally ▶ <kbd>N</kbd></button>
+        <button id="btn-prev" title="Restart the current detected rally, or go to the one before (P)"><svg class="icon" aria-hidden="true"><use href="#i-prev"/></svg>Prev rally <kbd>P</kbd></button>
+        <button id="btn-next" title="Next detected rally after the playhead (N)">Next rally<svg class="icon" aria-hidden="true"><use href="#i-next"/></svg><kbd>N</kbd></button>
         <span class="sep"></span>
         <button id="btn-start" class="primary" title="Mark the serve toss (S)">Mark start <kbd>S</kbd></button>
         <button id="btn-end" class="primary" title="Mark the moment the ball is dead (E)">Mark end <kbd>E</kbd></button>
         <button id="btn-cancel" title="Discard the open start mark (Esc)">Cancel <kbd>Esc</kbd></button>
         <button id="btn-undo" title="Undo the last label change (U)">Undo <kbd>U</kbd></button>
         <span class="sep"></span>
-        <button id="btn-approve" class="approve" title="Approve the label at the playhead and jump to the next one to review (A)">✓ Approve &amp; next <kbd>A</kbd></button>
+        <button id="btn-approve" class="approve" title="Approve the label at the playhead and jump to the next one to review (A)"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Approve &amp; next <kbd>A</kbd></button>
         <span class="sep"></span>
         <button id="btn-calibrate" title="Pause on a clear frame and click known court points">Calibrate court</button>
       </div>
     </section>
     <aside>
-      <section id="calib-panel" hidden>
+      <section id="calib-panel" class="kit" hidden>
         <h2>Court calibration</h2>
-        <p class="help">Pause on a frame where the court lines are clear. Click each landmark on the video in turn; press <em>Skip</em> for any you can't see. At least 4 are needed. Left/right as seen from the camera; "near" is the camera end. The last two are the top of the net tape where it meets each antenna; they are optional. Re-opening a saved calibration keeps its points, so you only click what is missing. A magnifier follows the cursor: scroll to zoom in or out.</p>
+        <p class="help">Pause on a frame where the court lines are clear. Click each landmark on the video in turn; press <em>Skip</em> for any you can't see. At least 4 are needed. Left/right as seen from the camera; "near" is the camera end. The last two are the top of the net tape where it meets each antenna; they are optional. Click a landmark in the list to move it. A magnifier follows the cursor: scroll to zoom in or out.</p>
         <p id="calib-draft" class="draft-note" hidden></p>
         <ol id="calib-list" class="list"></ol>
-        <button id="calib-skip">Skip</button>
-        <button id="calib-undo">Undo</button>
-        <button id="calib-save" class="primary" disabled>Save calibration</button>
-        <button id="calib-cancel">Cancel</button>
+        <div class="controls">
+          <button id="calib-skip">Skip</button>
+          <button id="calib-undo">Undo</button>
+          <button id="calib-save" class="primary" disabled>Save calibration</button>
+          <button id="calib-cancel">Cancel</button>
+        </div>
         <p id="calib-result" class="help"></p>
       </section>
-      <section>
+      <section class="kit">
         <div class="section-head">
           <h2>Your labels <span id="label-count" class="badge">0</span> <span id="approved-count" class="approved-count"></span></h2>
           <span id="save-state" class="save-state"></span>
         </div>
-        <p class="help">Label each rally from serve toss to ball dead. Use <em>start = now</em> / <em>end = now</em> to fix a label at the current video time. Amber labels still need checking: <kbd>A</kbd> approves the one playing and jumps to the next.</p>
+        <p class="help">Label each rally from serve toss to ball dead. <em>start = now</em> / <em>end = now</em> fix a label at the current video time. Orange labels still need checking: <kbd>A</kbd> approves the one playing and jumps to the next.</p>
         <button id="btn-import" title="Copy the detected rallies into your labels so you only correct them">Start from detected rallies</button>
         <ol id="labels" class="list"></ol>
       </section>
-      <section>
+      <section class="kit">
         <h2>Detected rallies <span id="rally-count" class="badge">0</span></h2>
         <ol id="rallies" class="list"></ol>
       </section>

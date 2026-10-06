@@ -17,18 +17,18 @@ function render() {
   $("#groups").innerHTML =
     areas
       .map(
-        (area) => `<section><h2>${esc(area)}</h2><div class="cards">${shown
+        (area) => `<section class="register kit"><h2>${esc(area)}</h2>${shown
           .filter((s) => s.area === area)
           .map(
-            (s) => `<article class="card">
-              <div class="card-head"><a href="${esc(s.link)}" target="_blank" rel="noopener">${esc(s.name)}</a>
+            (s) => `<article class="entry">
+              <div><p class="name"><a href="${esc(s.link)}" target="_blank" rel="noopener">${esc(s.name)}</a></p>
+                <p class="meta">${esc(s.kind)} · ${esc(s.licence)}</p>
                 <span class="src-status src-${s.status.replace(" ", "-")}">${STATUS[s.status]}</span></div>
-              <p class="meta">${esc(s.kind)} · ${esc(s.licence)}</p>
               <p>${esc(s.what)}</p>
-              <p class="use"><strong>In vball:</strong> ${esc(s.use)}</p>
+              <p class="use"><b>In vball:</b> ${esc(s.use)}</p>
             </article>`,
           )
-          .join("")}</div></section>`,
+          .join("")}</section>`,
       )
       .join("") || `<p class="help">No sources with this status.</p>`;
   for (const b of document.querySelectorAll("#filters button")) b.setAttribute("aria-pressed", String(b.dataset.f === filter));

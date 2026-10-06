@@ -45,8 +45,9 @@ function longest(matches, n = 10) {
     .slice(0, n);
 }
 
-function tile(label, value, sub = "") {
-  return `<div class="tile"><div class="label">${esc(label)}</div><div class="value">${esc(value)}</div><div class="sub">${esc(sub)}</div></div>`;
+// one team-sheet line of figures: the number set in the display face, its meaning straight after it
+function fig(value, label) {
+  return `<span class="fig"><b>${esc(value)}</b><span>${esc(label)}</span></span>`;
 }
 
 function renderTiles(matches) {
@@ -57,13 +58,12 @@ function renderTiles(matches) {
   const best = board(matches, "serves", "speed_kmh", 1)[0];
   const sources = [...new Set(matches.map((m) => m.rallies.source))].join(" + ");
   $("#tiles").innerHTML = [
-    tile("Rallies", rallies, `from ${sources}`),
-    tile("Average rally", rallies ? `${(rallyTime / rallies).toFixed(1)} s` : "–", `${(rallyTime / 60).toFixed(0)} min of play`),
-    tile("Serves measured", serves.length ? `${ok.length} / ${serves.length}` : "–", "plausible 3D fits / found"),
-    tile(
-      "Hardest serve",
+    fig(rallies, `rallies (${sources})`),
+    fig(rallies ? `${(rallyTime / rallies).toFixed(1)} s` : "–", `average rally, ${(rallyTime / 60).toFixed(0)} min of play`),
+    fig(serves.length ? `${ok.length} of ${serves.length}` : "–", "serves measured"),
+    fig(
       best ? `${Math.round(best.speed_kmh)} km/h` : "–",
-      best ? `${sideLabel(best.side, best.our_side)} · #${best.match_id} at ${mmss(best.time_s)}` : "needs 3D flights",
+      best ? `hardest serve, ${sideLabel(best.side, best.our_side)} in #${best.match_id} at ${mmss(best.time_s)}` : "hardest serve (needs 3D flights)",
     ),
   ].join("");
 }
@@ -121,7 +121,7 @@ function renderBoards(matches) {
 
 function renderMissing(matches) {
   const items = matches.flatMap((m) =>
-    Object.entries(m.missing || {}).map(([what, how]) => `<li>#${m.id} ${esc(m.name)}: ${what}: ${esc(how)}</li>`),
+    Object.entries(m.missing || {}).map(([what, how]) => `<li>#${m.id} ${esc(m.name)}, ${what}: ${esc(how).replace(/(uv run vball [a-z0-9]+ \d+)/, "<code>$1</code>")}</li>`),
   );
   const detected = matches.filter((m) => m.rallies.source === "detected").map((m) => `#${m.id}`);
   if (detected.length)
@@ -135,11 +135,8 @@ const CELL = 14; // px per metre
 const X0 = -2; // heat grid starts at x -2 m, y -4 m (13 x 26 cells)
 const Y0 = -4;
 const RAMP = ["#cde2fb", "#b7d3f6", "#9ec5f4", "#86b6ef", "#6da7ec", "#5598e7", "#3987e5", "#2a78d6", "#256abf", "#1c5cab", "#184f95", "#104281", "#0d366b"];
-const dark = () => window.matchMedia("(prefers-color-scheme: dark)").matches;
-
 function rampColor(t) {
-  const ramp = dark() ? [...RAMP].reverse() : RAMP; // dark mode: more = lighter, against the dark surface
-  return ramp[Math.min(ramp.length - 1, Math.round(t * (ramp.length - 1)))];
+  return RAMP[Math.min(RAMP.length - 1, Math.round(t * (RAMP.length - 1)))];
 }
 
 // court metres -> canvas px; far baseline at the top, near (camera) end at the bottom
@@ -149,29 +146,29 @@ function drawHeat(players) {
   const canvas = $("#heat");
   const ctx = canvas.getContext("2d");
   const css = getComputedStyle(document.documentElement);
-  ctx.fillStyle = css.getPropertyValue("--panel");
+  ctx.fillStyle = css.getPropertyValue("--maple"); // the court is drawn as the hall floor itself
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   for (const side of ["near", "far"]) {
     players[side].heat.forEach((row, iy) =>
       row.forEach((v, ix) => {
         const y = Y0 + iy;
-        if (!v || (side === "near") !== y < 9) return; // each side only on its own half
+        if (v < 0.03 || (side === "near") !== y < 9) return; // near-zero stays bare floor; each side on its own half
         const [px, py] = toPx(X0 + ix, y + 1);
         ctx.fillStyle = rampColor(v);
         ctx.fillRect(px + 1, py + 1, CELL - 2, CELL - 2); // 2px surface gap between cells
       }),
     );
   }
-  ctx.strokeStyle = css.getPropertyValue("--muted");
-  ctx.lineWidth = 1;
+  ctx.strokeStyle = css.getPropertyValue("--paint-white");
+  ctx.lineWidth = 2;
   for (const [x1, y1, x2, y2] of [[0, 0, 9, 0], [9, 0, 9, 18], [9, 18, 0, 18], [0, 18, 0, 0], [0, 6, 9, 6], [0, 12, 9, 12]]) {
     ctx.beginPath();
     ctx.moveTo(...toPx(x1, y1));
     ctx.lineTo(...toPx(x2, y2));
     ctx.stroke();
   }
-  ctx.strokeStyle = css.getPropertyValue("--fg");
-  ctx.lineWidth = 3;
+  ctx.strokeStyle = css.getPropertyValue("--kit");
+  ctx.lineWidth = 4;
   ctx.beginPath();
   ctx.moveTo(...toPx(-0.5, 9));
   ctx.lineTo(...toPx(9.5, 9));
@@ -216,9 +213,9 @@ function renderSides() {
     .map((side) => {
       const s = detail.players[side];
       const dist = s.mean_net_distance_m == null ? "–" : `${s.mean_net_distance_m.toFixed(1)} m`;
-      return `<div class="tile"><div class="label">${sideLabel(side, m.our_side)} (${side} end)</div>
-        <div class="value">${s.players_per_frame.toFixed(1)}</div><div class="sub">players on court per rally frame (ideal 6)</div>
-        <div class="value small">${dist}</div><div class="sub">average distance from the net</div></div>`;
+      return `<div class="side-row"><h3>${sideLabel(side, m.our_side)} · ${side} end</h3>
+        <b>${s.players_per_frame.toFixed(1)}</b><span>players on court per rally frame (ideal 6)</span>
+        <b>${dist}</b><span>average distance from the net</span></div>`;
     })
     .join("");
 }

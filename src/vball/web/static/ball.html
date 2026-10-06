@@ -7,13 +7,25 @@
   <link rel="stylesheet" href="/style.css">
 </head>
 <body>
-  <header>
-    <h1><a href="/">vball</a> · Ball check</h1>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="i-prev" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-next" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  </svg>
+  <header class="topbar">
+    <h1 class="brand-h"><a class="brand" href="/"><span class="brand-team">Imperial M2</span><span class="brand-name">vball</span></a></h1>
+    <nav class="tabs" aria-label="Pages">
+      <a href="/">Viewer</a>
+      <a href="/ball.html" aria-current="page">Ball check</a>
+      <a href="/stats.html">Stats</a>
+      <a href="/sources.html">Sources</a>
+    </nav>
+  </header>
+  <div class="bench">
     <select id="match" aria-label="Match"></select>
     <span id="progress" class="badge"></span>
-  </header>
+  </div>
   <main class="ballcheck">
-    <section>
+    <section class="kit player">
       <div class="frame-wrap">
         <img id="frame" alt="Video frame to label" hidden>
         <div id="marker" class="marker" hidden></div>
@@ -23,8 +35,8 @@
         <span id="message" class="message"></span>
       </div>
       <div class="controls">
-        <button id="btn-prev">◀ Previous <kbd>←</kbd></button>
-        <button id="btn-next">Next ▶ <kbd>→</kbd></button>
+        <button id="btn-prev"><svg class="icon" aria-hidden="true"><use href="#i-prev"/></svg>Previous <kbd>←</kbd></button>
+        <button id="btn-next">Next<svg class="icon" aria-hidden="true"><use href="#i-next"/></svg><kbd>→</kbd></button>
         <span class="sep"></span>
         <button id="btn-none" class="primary">No ball visible <kbd>X</kbd></button>
         <button id="btn-skip">Can't tell <kbd>K</kbd></button>

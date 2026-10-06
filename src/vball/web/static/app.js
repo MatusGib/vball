@@ -108,7 +108,7 @@ function queueSave() {
         body: snapshot,
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      setSaveState("Saved ✓", "ok");
+      setSaveState("Saved", "ok");
       return true;
     } catch (err) {
       setSaveState(`Not saved (${err.message}). Keep this tab open and try again.`, "warn");
@@ -218,7 +218,10 @@ function setEdge(i, edge) {
   say(`Rally #${numberOf(updated)} ${edge} set to ${fmt(t)}`, "ok");
 }
 
+let stampStart = null; // start_s of the label that was just approved: its row gets the green tape (renderLists)
+
 function toggleApproved(i) {
+  if (!labels[i].approved) stampStart = labels[i].start_s;
   const updated = replaceLabel(i, { approved: !labels[i].approved });
   say(`Rally #${numberOf(updated)} ${updated.approved ? "approved" : "marked to review"} · ${approvedCount()} / ${labels.length} approved`, "ok");
 }
@@ -226,9 +229,10 @@ function toggleApproved(i) {
 function approveAndNext() {
   const i = labelAt(video.currentTime);
   if (i < 0) {
-    say("No label at the playhead. Play one with ▶ (or press S/E to add one), then approve.", "warn");
+    say("No label at the playhead. Play one from the list (or press S/E to add one), then approve.", "warn");
     return;
   }
+  if (!labels[i].approved) stampStart = labels[i].start_s;
   const approved = replaceLabel(i, { approved: true });
   const n = numberOf(approved);
   const nextIdx = labels.findIndex((l) => !l.approved && l.start_s > approved.start_s);
@@ -323,10 +327,20 @@ video.addEventListener("seeked", renderLive);
 
 // ---------- rendering ----------
 
-function smallButton(text, title, onClick, cls = "") {
+function icon(name) {
+  return `<svg class="icon" aria-hidden="true"><use href="#i-${name}"/></svg>`;
+}
+
+function smallButton(text, title, onClick, cls = "", iconName = null) {
   const b = document.createElement("button");
   b.className = `small ${cls}`;
-  b.textContent = text;
+  if (iconName) {
+    b.innerHTML = icon(iconName);
+    if (text) b.append(text);
+    b.setAttribute("aria-label", title);
+  } else {
+    b.textContent = text;
+  }
   b.title = title;
   b.onclick = (e) => {
     e.stopPropagation();
@@ -371,23 +385,26 @@ function renderLists() {
     const dur = document.createElement("span");
     dur.className = "dur";
     dur.textContent = `${(l.end_s - l.start_s).toFixed(1)} s`;
-    li.append(
-      num,
-      when,
-      dur,
+    const actions = document.createElement("span");
+    actions.className = "actions";
+    actions.append(
       smallButton(
-        l.approved ? "✓ approved" : "approve",
+        l.approved ? "approved" : "approve",
         l.approved ? "Approved. Click to mark it as needing review again" : "Mark this label as checked",
         () => toggleApproved(i),
         l.approved ? "approved" : "to-review",
+        l.approved ? "check" : null,
       ),
-      smallButton("▶", "Play this rally", () => playLabel(i)),
+      smallButton("", "Play this rally", () => playLabel(i), "", "play"),
       smallButton("start = now", "Set the start to the current video time", () => setEdge(i, "start")),
       smallButton("end = now", "Set the end to the current video time", () => setEdge(i, "end")),
-      smallButton("✕", "Delete this label", () => deleteLabel(i)),
+      smallButton("", "Delete this label", () => deleteLabel(i), "", "close"),
     );
+    li.append(num, when, dur, actions);
+    if (stampStart !== null && l.approved && Math.abs(l.start_s - stampStart) < 1e-6) li.classList.add("stamp");
     labelsEl.appendChild(li);
   });
+  stampStart = null;
   $("#label-count").textContent = labels.length;
   $("#approved-count").textContent = `${approvedCount()} / ${labels.length} approved`;
 
@@ -657,7 +674,7 @@ function drawCourt(ctx, frame, r) {
   }
   // net: a post from each centre-line end up to the clicked tape top, and the tape between them
   const tops = (seg.net_image || []).map((top, i) => top && [project(H, [i * 9, 9]), top]).filter(Boolean);
-  ctx.strokeStyle = "rgba(250, 204, 21, 0.95)";
+  ctx.strokeStyle = "rgba(34, 211, 238, 0.95)"; // the net belongs to the court layer (cyan), never the ball's yellow
   for (const [[fx, fy], [tx, ty]] of tops) {
     ctx.beginPath();
     ctx.moveTo(r.x + fx * r.scale, r.y + fy * r.scale);
@@ -762,13 +779,14 @@ function renderCalib() {
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "calib-pick";
-    btn.textContent = `${name.replaceAll("_", " ")}${done ? " ✓" : ""}`;
+    btn.textContent = name.replaceAll("_", " ");
+    if (done) li.classList.add("done");
     btn.title = done ? "Click, then click the video to move this point" : "Click, then click this point on the video";
     btn.onclick = () => {
       calib.index = i;
       renderCalib();
     };
-    if (i === calib.index) li.className = "active";
+    if (i === calib.index) li.classList.add("active");
     li.appendChild(btn);
     list.appendChild(li);
   });
