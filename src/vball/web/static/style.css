@@ -157,7 +157,7 @@ button.primary kbd { border-color: rgba(35, 23, 12, 0.3); color: #4a3420; }
 
 /* ---------- side panels ---------- */
 .section-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 6px 14px; }
-.badge { display: inline-block; min-width: 24px; padding: 1px 7px; border-radius: 999px; background: var(--kit-3); color: var(--on-kit); text-align: center; font: 700 12px var(--display); font-variant-numeric: tabular-nums; vertical-align: 2px; }
+.badge { display: inline-block; min-width: 24px; padding: 1px 7px; border-radius: 999px; background: var(--kit-3); color: var(--on-kit); text-align: center; font: 600 12px var(--ui); font-variant-numeric: tabular-nums; vertical-align: 2px; }
 .help { color: var(--on-kit-soft); margin: 4px 0 10px; max-width: 70ch; }
 .bench .help, main.stats > .help { color: var(--ink-soft); }
 .save-state { font-size: 12px; color: var(--on-kit-soft); }
@@ -191,7 +191,7 @@ button.primary kbd { border-color: rgba(35, 23, 12, 0.3); color: #4a3420; }
 .draft-note { margin: 4px 0 10px; padding: 7px 10px; border-radius: 2px; background: rgba(240, 145, 63, 0.14); color: var(--next); font-weight: 600; }
 
 /* ---------- Ball check ---------- */
-main.ballcheck { grid-template-columns: 1fr; }
+main.ballcheck { grid-template-columns: 1fr; width: fit-content; max-width: calc(100% - 40px); }
 main.ballcheck > section { justify-self: start; max-width: 100%; }
 .frame-wrap { position: relative; display: inline-block; max-width: 100%; }
 .frame-wrap img { display: block; max-width: 100%; max-height: calc(100vh - 290px); cursor: crosshair; border-radius: 2px; }
@@ -203,9 +203,15 @@ main.stats > section { margin-bottom: 16px; }
 .sheet { display: flex; flex-wrap: wrap; gap: 6px 26px; align-items: baseline; padding: 14px 18px; }
 .sheet .fig { display: inline-flex; align-items: baseline; gap: 7px; }
 .sheet a.fig { text-decoration: none; }
+.sheet a.fig span { color: var(--paint-blue); text-decoration: underline; text-underline-offset: 3px; }
 .sheet a.fig:hover b { text-decoration: underline; text-decoration-thickness: 2px; }
 .sheet .fig b { font: 700 28px/1 var(--display); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
 .sheet .fig span { color: var(--on-kit-soft); }
+/* one match: where each side plays sits beside the leaderboards instead of leaving a half-empty row */
+.stats-body { display: grid; grid-template-columns: fit-content(700px) minmax(0, 1fr); gap: 16px; align-items: start; margin-bottom: 16px; }
+.stats-body:has(#sides[hidden]) { grid-template-columns: minmax(0, 1fr); }
+.stats-body > .boards { margin: 0; }
+@media (max-width: 1100px) { .stats-body { grid-template-columns: minmax(0, 1fr); } }
 .boards { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(360px, 100%), 1fr)); gap: 16px; }
 .board { padding: 2px 14px 12px; overflow-x: auto; }
 .board table { width: 100%; border-collapse: collapse; }
