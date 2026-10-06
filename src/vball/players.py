@@ -85,8 +85,23 @@ def run_yolo(video: Path, out_csv: Path, model: str = "yolo11s.pt", imgsz: int =
     save_players(out_csv, rows)
 
 
+def team_sides(track_id: np.ndarray, side: np.ndarray, on_court: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    """One side per track (its side in most of its on-court frames), and a track on court in at least half of its
+    frames is a player in all of them: someone stepping over the net line or chasing the ball off court for a moment
+    keeps their team."""
+    ids, inverse = np.unique(track_id, return_inverse=True)
+    frames = np.bincount(inverse, minlength=len(ids))
+    on = np.bincount(inverse, weights=on_court.astype(float), minlength=len(ids))
+    far = np.bincount(inverse, weights=(on_court & (side == 1)).astype(float), minlength=len(ids))
+    far_all = np.bincount(inverse, weights=(side == 1).astype(float), minlength=len(ids))
+    team = np.where(on > 0, far > on / 2, far_all > frames / 2).astype(int)  # never on court: where it mostly is
+    player = (on > 0) & (on >= frames / 2)
+    return team[inverse], player[inverse]
+
+
 def with_court(players: Players, cal: Calibration) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """Court (x, y) of each player's feet (bottom-centre of the box), side (0 near, 1 far), on-court flag."""
+    """Court (x, y) of each player's feet (bottom-centre of the box), side (0 near, 1 far) and on-court flag, both
+    per track rather than per frame (team_sides)."""
     feet = np.stack([(players.box[:, 0] + players.box[:, 2]) / 2, players.box[:, 3]], axis=1)
     court_xy = np.zeros_like(feet)
     segments = cal.segments or [Segment(0, 1 << 62, np.eye(3))]
@@ -102,6 +117,7 @@ def with_court(players: Players, cal: Calibration) -> tuple[np.ndarray, np.ndarr
         (court_xy[:, 0] >= ON_COURT_X[0]) & (court_xy[:, 0] <= ON_COURT_X[1])
         & (court_xy[:, 1] >= ON_COURT_Y[0]) & (court_xy[:, 1] <= ON_COURT_Y[1])
     )
+    side, on_court = team_sides(players.track_id, side, on_court)
     return court_xy, side, on_court
 
 

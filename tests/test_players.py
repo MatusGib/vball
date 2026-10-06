@@ -60,3 +60,14 @@ def test_player_stats_counts_full_sides():
     assert stats.frames == 10
     assert stats.full_sides_share == 0.5
     assert stats.ids_per_side_per_rally == 6.0
+
+
+def test_a_track_keeps_its_team_side():
+    spots = [(4.5, 3.0)] * 8 + [(4.5, 10.0), (13.0, 3.0)]  # 8 frames near, one over the net line, one off court
+    rows = [(f, 1, *box_at(xy), 0.9) for f, xy in enumerate(spots)]
+    rows += [(f, 2, *box_at((14.0, 5.0)), 0.9) for f in range(10)]  # a spectator beside the court, never on it
+    court_xy, side, on_court = with_court(Players.from_rows(rows), calibration())
+    assert side[:10].tolist() == [0] * 10  # still near (our team) when over the line
+    assert on_court[:10].tolist() == [True] * 10  # still a player when chasing the ball off court
+    assert on_court[10:].tolist() == [False] * 10
+    assert np.allclose(court_xy[8], [4.5, 10.0], atol=1e-6)  # positions are not changed
