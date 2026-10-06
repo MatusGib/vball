@@ -171,3 +171,11 @@ heights of the ball at 42%; those give legal visits (≤ 3 touches per side) 97%
 
 **Real scores vs labelled rallies:** Kent 1 has 42 labelled rallies for 45 points played, Kent 2 40 for 47, Kent 3 45
 for 50: some rallies are missing from the labels (or the recording), so the inferred scores cannot be exact there.
+
+**Low cameras and jump serves.** Drawing every set's calibration showed them right; the failures were in the reading:
+benches and walls 20–90 m "behind" the far baseline counted as far servers (now: within 9 m of a baseline), jump
+servers' feet in the air map to the far end on a 0.5 m camera (now: where they stood in the second before the contact),
+and on Brunel away 1 the far receivers themselves map behind the far baseline (a foot 19 px above it is 93 m away). On
+cameras under 1 m the ball decides first (ddecks' trajectory fusion): a near serve is first seen more than 200 px above
+the net tape. Brunel away 3 28 / 30 eye-checked; Brunel away 1 4–33 → 20–17, matching all 14 serves judged by eye; on
+the 1.5 m Kent camera the cue is wrong (19 / 36), so there the players decide.

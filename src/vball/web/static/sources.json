@@ -196,6 +196,11 @@
               ]
             ]
           }
+        },
+        {
+          "date": "2026-10-06",
+          "title": "Two more court-mapping traps found with the real scores",
+          "result": "People more than 9 m behind a baseline (benches, the far wall) were counted as servers; a jump server's feet in the air map to the far end on a low camera. Servers are now looked for within 9 m of a baseline and placed where they stood in the second before the contact."
         }
       ]
     },
@@ -365,6 +370,35 @@
                 "VolleyVision YOLOv8m players",
                 "19 / 36",
                 "–"
+              ]
+            ]
+          }
+        },
+        {
+          "date": "2026-10-06",
+          "title": "Its trajectory fusion: the ball decides on low cameras",
+          "result": "On the 0.5 m Brunel away camera players cannot show the serving end: the far court is a few pixel rows deep (a foot 19 px above the far baseline maps to 93 m) and jump servers' feet in the air map to the far end. The ball can: a near serve is first seen well above the net tape (close to the lens), a far serve near it. Now the first rule on cameras under 1 m.",
+          "table": {
+            "head": [
+              "Ball cue (first sightings > 200 px above the net tape)",
+              "Result"
+            ],
+            "rows": [
+              [
+                "Brunel away 3, eye-checked",
+                "28 / 30"
+              ],
+              [
+                "Brunel away 1, score",
+                "4–33 (players) → 20–17"
+              ],
+              [
+                "Brunel away 1, servers visible by eye",
+                "14 / 14"
+              ],
+              [
+                "Kent 3 (1.5 m camera), eye-checked",
+                "19 / 36: not used there"
               ]
             ]
           }

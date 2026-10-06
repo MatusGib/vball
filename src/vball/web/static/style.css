@@ -227,7 +227,7 @@ main.stats > section { margin-bottom: 16px; }
 .serving h3 { margin: 12px 0 6px; font: 700 15px var(--display); letter-spacing: 0.04em; text-transform: uppercase; }
 .lineup { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin-bottom: 6px; color: var(--on-kit-soft); }
 .lineup input { min-width: 16ch; flex: 1; border-color: var(--kit-line); }
-.lineup input.score-in { min-width: 0; width: 6ch; flex: none; }
+.lineup input.score-in { min-width: 0; width: 4.6em; flex: none; }
 #real-form { margin-top: 8px; }
 .board td.team-near:first-child { color: var(--near); width: auto; }
 .board td.team-far:first-child { color: var(--far); width: auto; }
@@ -245,6 +245,7 @@ main.stats > section { margin-bottom: 16px; }
 .board tbody tr[data-href]:hover { background: var(--kit-3); }
 .board td a { color: var(--paint-blue); font-weight: 600; }
 .board td.empty { color: var(--on-kit-soft); border: none; }
+.board td.empty:first-child { font: 400 14px var(--ui); width: auto; }
 .badge-exp { background: rgba(240, 145, 63, 0.16); color: var(--next); border-radius: 2px; padding: 2px 6px; font: 700 11px var(--ui); letter-spacing: 0.04em; vertical-align: 2px; text-transform: uppercase; }
 #sides { padding: 2px 16px 16px; }
 .side-switch { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
