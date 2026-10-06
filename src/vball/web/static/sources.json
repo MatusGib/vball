@@ -80,7 +80,7 @@
       "status": "not tried",
       "link": "https://github.com/shukkkur/VolleyVision",
       "what": "Player, ball, action and court-segmentation image sets, mostly from other camera angles.",
-      "use": "Not used yet: needs a Roboflow key, and the no-derivatives licence is unclear for training."
+      "use": "Read 2026-10-06: its YOLOv8m action detector (block, defence, serve, set, spike; 52 MB weights on GitHub, no Roboflow key needed) is the most promising unused piece for per-player stats, since an action box names the action and the player together. Untested on our back view."
     },
     {
       "name": "ddecks beach-volley-vision",
@@ -90,7 +90,7 @@
       "status": "not tried",
       "link": "https://github.com/ddecks/beach-volley-vision",
       "what": "Beach volleyball pipeline: ball-visibility rally state machine, serve detection, RF-DETR player detector with ByteTrack.",
-      "use": "Not tried. Its RF-DETR + ByteTrack pairing is a candidate in the player-tracking work."
+      "use": "Read 2026-10-06: no per-player stats; its serve side by court depth + trajectory is the idea we tested (serving end right on 94% of clear Kent 3 rallies, see docs/results/phase2e). RF-DETR stays the candidate for low cameras."
     },
     {
       "name": "Ibrahim et al. Volleyball dataset",
@@ -140,7 +140,7 @@
       "status": "not tried",
       "link": "https://github.com/hoangqnguyen/spot",
       "what": "6,137 frame-accurate events (serve, receive, set, spike, block, score) in 1,028 broadcast rallies.",
-      "use": "Kept for touch and action detection (phase 2c)."
+      "use": "Read 2026-10-06: serve 17%, receive 25%, set 23%, spike 22%, block 9%, score 4% of 6,137 events; 74–77% spotting within 1–4 frames; 13 GB, no published weights. Kept for touch spotting (phase 2c)."
     },
     {
       "name": "MultiSports (volleyball subset)",
@@ -170,7 +170,7 @@
       "status": "not tried",
       "link": "https://github.com/haotianxia/VREN",
       "what": "Rally notation (actions and locations) for pro and NCAA matches.",
-      "use": "Kept for rally-level stats ideas."
+      "use": "Read 2026-10-06: a 136 KB CSV of rally notation (locations, pass rating, set and hit type, blockers, win and lose reason). Priors for the touch sequence and stat definitions, not vision training data."
     },
     {
       "name": "openvolley pydatavolley / ovscout2",
@@ -200,7 +200,7 @@
       "status": "not tried",
       "link": "https://github.com/williamyen042/passform",
       "what": "Ball trajectory turn → contact frame → nearest player = passer, then pose angles.",
-      "use": "The contact-frame idea matches our 3D flight splitting; planned for touch attribution."
+      "use": "Read 2026-10-06: contact = kink in the ball path, toucher = the person overlapping the ball at that frame. Our flight splits give the kinks; this is the planned touch-attribution rule."
     }
   ]
 }
