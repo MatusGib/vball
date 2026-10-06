@@ -104,3 +104,36 @@ depth. Not adopted.
 
 Experiment scripts were throwaway (scratchpad): `serve_side.py`, `hyp.py`, `server.py`, `constrained.py`,
 `sheet.py` (rally-start contact sheet). The serving-end method is ~40 lines on top of `vball.serve`.
+
+## Built: `vball serving` on all 11 sets (2026-10-06)
+
+Design: `docs/superpowers/specs/2026-10-06-serving-score-design.md`. Serving end as in experiment 1; serve outcomes by
+the owner's rule (ended right after the serve: the next server says ace or error; played: in); the VolleyVision action
+detector looks for the receivers playing the serve. About 5 minutes per set on the RTX 3050 (action detector).
+
+| Set | Rallies | Ends: contact / count / unknown | Score near–far | Legal? | Aces | Errors | To check | Receive seen |
+|---|---|---|---|---|---|---|---|---|
+| Kent set 1 (labels) | 42 | 20 / 20 / 2 | 15–25 | yes | 1 | 3 | 7 | 33 |
+| Kent set 2 (labels) | 40 | 20 / 20 / 0 | 15–25 | yes | 0 | 0 | 4 | 29 |
+| Kent set 3 (labels) | 45 | 30 / 14 / 1 | 19–25 | yes | 1 | 1 | 9 | 21 |
+| Kent set 4 (detected) | 53 | 23 / 29 / 1 | 20–31 | no | 0 | 0 | 6 | 34 |
+| Brunel home set 1 (detected) | 40 | 19 / 17 / 4 | 19–17 | no | 0 | 0 | 10 | 14 |
+| Brunel home set 2 (detected) | 46 | 15 / 27 / 4 | 17–25 | yes | 0 | 0 | 10 | 17 |
+| Brunel home set 3 (detected) | 48 | 18 / 22 / 8 | 12–27 | no | 0 | 0 | 16 | 17 |
+| Brunel home set 4 (detected) | 53 | 16 / 31 / 6 | 17–29 | no | 0 | 0 | 15 | 20 |
+| Brunel away set 1 (detected) | 38 | 9 / 29 / 0 | 5–32 | no | 0 | 0 | 4 | 0 |
+| Brunel away set 2 (detected) | 45 | 12 / 33 / 0 | 27–17 | no | 0 | 0 | 10 | 2 |
+| Brunel away set 3 (labels) | 41 | 4 / 37 / 0 | 39–1 | no | 3 | 0 | 3 | 3 |
+
+"Legal" = the final score is a finished set (25 with the loser on 23 or less, or two clear past 25).
+
+Reading:
+
+- **Kent 1–3 (labelled):** legal scores (15–25, 15–25, 19–25), the camera height the method was built on.
+- **Detected rallies:** false rallies add points (Kent 4 20–31, Brunel home 3 12–27). Approving labels fixes this.
+- **Brunel away (0.5 m camera):** serving end fails (39–1); needs the V key or a better server finder.
+- **Aces and errors are under-counted:** VREN says a 45-point set has about 7 serve errors and 2 aces; the automatic
+  rule finds 0–3 per set. Most serve-ending rallies land in the 2.5–4.5 s band (*check*), and a receiver catching or
+  bumping an out ball looks like a receive to the action detector. The viewer suggests ace or error for each one to
+  check (from who served next), one O press each.
+- **Receive seen** is frequent on the Kent camera (21–34 rallies per set) and rare on the low Brunel away camera (0–3).

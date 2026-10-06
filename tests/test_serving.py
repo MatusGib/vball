@@ -65,6 +65,11 @@ def test_last_rally_winner_from_a_legal_set_end():
     assert serving.outcomes(rows)[-1]["winner"] is None
 
 
+def test_legal_set_ends():
+    assert serving.legal_end(25, 23, 25) and serving.legal_end(27, 25, 25) and serving.legal_end(15, 9, 15)
+    assert not serving.legal_end(25, 24, 25) and not serving.legal_end(31, 20, 25) and not serving.legal_end(24, 10, 25)
+
+
 def test_fixes_match_by_start_time():
     rows = [rally(0, 9.0, "near"), rally(10.2, 2.0, "near"), rally(20, 9.0, "near")]
     fixes = {"10.0": {"end": "far"}, "0.3": {"outcome": "error"}}

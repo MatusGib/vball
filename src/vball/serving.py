@@ -156,7 +156,9 @@ def fix_key(start_s: float) -> str:
 
 
 def legal_end(a: int, b: int, target: int) -> bool:
-    return max(a, b) >= target and abs(a - b) >= 2
+    """A finished set: the winner reached the target with the loser 2+ behind, or went past it by exactly 2."""
+    w, l = max(a, b), min(a, b)
+    return (w == target and l <= target - 2) or (w > target and w - l == 2)
 
 
 def other(end: str) -> str:
