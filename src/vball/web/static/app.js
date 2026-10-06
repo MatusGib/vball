@@ -438,7 +438,7 @@ function renderLive() {
   const state = $("#state");
   if (pendingStart !== null) {
     status.className = "status rec";
-    state.textContent = `● RECORDING rally from ${fmt(pendingStart)} (+${Math.max(0, t - pendingStart).toFixed(1)} s). Press E when the ball is dead.`;
+    state.textContent = `Recording rally from ${fmt(pendingStart)} (+${Math.max(0, t - pendingStart).toFixed(1)} s). Press E when the ball is dead.`;
   } else {
     status.className = "status idle";
     const toReview = labels.length - approvedCount();

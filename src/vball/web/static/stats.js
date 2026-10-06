@@ -46,8 +46,9 @@ function longest(matches, n = 10) {
 }
 
 // one team-sheet line of figures: the number set in the display face, its meaning straight after it
-function fig(value, label) {
-  return `<span class="fig"><b>${esc(value)}</b><span>${esc(label)}</span></span>`;
+function fig(value, label, href = null) {
+  const tag = href ? `a href="${href}" title="Open the viewer at this moment"` : "span";
+  return `<${tag} class="fig"><b>${esc(value)}</b><span>${esc(label)}</span></${href ? "a" : "span"}>`;
 }
 
 function renderTiles(matches) {
@@ -64,6 +65,7 @@ function renderTiles(matches) {
     fig(
       best ? `${Math.round(best.speed_kmh)} km/h` : "–",
       best ? `hardest serve, ${sideLabel(best.side, best.our_side)} in #${best.match_id} at ${mmss(best.time_s)}` : "hardest serve (needs 3D flights)",
+      best ? viewerLink(best.match_id, best.time_s, "speed") : null,
     ),
   ].join("");
 }
@@ -131,12 +133,17 @@ function renderMissing(matches) {
 
 // ---------- side heat maps ----------
 
-const CELL = 14; // px per metre
+const CELL = 24; // px per metre: the court fills its panel
 const X0 = -2; // heat grid starts at x -2 m, y -4 m (13 x 26 cells)
 const Y0 = -4;
-const RAMP = ["#cde2fb", "#b7d3f6", "#9ec5f4", "#86b6ef", "#6da7ec", "#5598e7", "#3987e5", "#2a78d6", "#256abf", "#1c5cab", "#184f95", "#104281", "#0d366b"];
-function rampColor(t) {
-  return RAMP[Math.min(RAMP.length - 1, Math.round(t * (RAMP.length - 1)))];
+// one ramp per side, from that side's reserved overlay colour (near blue, far red), light -> dark
+const RAMPS = {
+  near: ["#cde2fb", "#b7d3f6", "#9ec5f4", "#86b6ef", "#6da7ec", "#5598e7", "#3987e5", "#2a78d6", "#256abf", "#1c5cab", "#184f95", "#104281", "#0d366b"],
+  far: ["#fde0dc", "#fbcbc4", "#f8b4ab", "#f59d92", "#f1867a", "#ec6f62", "#e0533f", "#cd4333", "#b8382b", "#a12f24", "#8a271e", "#731f18", "#5c1813"],
+};
+function rampColor(side, t) {
+  const ramp = RAMPS[side];
+  return ramp[Math.min(ramp.length - 1, Math.round(t * (ramp.length - 1)))];
 }
 
 // court metres -> canvas px; far baseline at the top, near (camera) end at the bottom
@@ -154,12 +161,12 @@ function drawHeat(players) {
         const y = Y0 + iy;
         if (v < 0.03 || (side === "near") !== y < 9) return; // near-zero stays bare floor; each side on its own half
         const [px, py] = toPx(X0 + ix, y + 1);
-        ctx.fillStyle = rampColor(v);
+        ctx.fillStyle = rampColor(side, v);
         ctx.fillRect(px + 1, py + 1, CELL - 2, CELL - 2); // 2px surface gap between cells
       }),
     );
   }
-  ctx.strokeStyle = css.getPropertyValue("--paint-white");
+  ctx.strokeStyle = css.getPropertyValue("--ink-soft"); // reads on the pale floor and on the night floor
   ctx.lineWidth = 2;
   for (const [x1, y1, x2, y2] of [[0, 0, 9, 0], [9, 0, 9, 18], [9, 18, 0, 18], [0, 18, 0, 0], [0, 6, 9, 6], [0, 12, 9, 12]]) {
     ctx.beginPath();

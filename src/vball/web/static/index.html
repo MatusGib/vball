@@ -51,6 +51,7 @@
     <label class="chip" title="Draw the calibrated court lines and net on the video"><input type="checkbox" id="show-court"><span class="swatch" style="background: var(--court)"></span>Court</label>
     <label class="chip" title="Draw player boxes with track ids and a top-down court map"><input type="checkbox" id="show-players"><span class="swatch" style="background: linear-gradient(90deg, var(--near) 50%, var(--far) 50%)"></span>Players</label>
     <label class="chip" title="Fitted 3D ball flights: the arc and the ball's speed and height, frame by frame (run vball ball3d first)"><input type="checkbox" id="show-speed"><span class="swatch" style="background: var(--ball)"></span>Speed</label>
+    <button id="btn-calibrate" title="Pause on a clear frame and click known court points">Calibrate court</button>
   </div>
   <main>
     <section class="player kit">
@@ -79,8 +80,6 @@
         <button id="btn-undo" title="Undo the last label change (U)">Undo <kbd>U</kbd></button>
         <span class="sep"></span>
         <button id="btn-approve" class="approve" title="Approve the label at the playhead and jump to the next one to review (A)"><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Approve &amp; next <kbd>A</kbd></button>
-        <span class="sep"></span>
-        <button id="btn-calibrate" title="Pause on a clear frame and click known court points">Calibrate court</button>
       </div>
     </section>
     <aside>

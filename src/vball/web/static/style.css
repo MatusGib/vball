@@ -1,14 +1,19 @@
 /* vball: Hall Floor. The interface is the sports-hall floor the footage was shot on: maple planks,
    painted court-line colours as the only accents and dividers, black kit panels where data is read.
    Overlay layers keep reserved colours: ball/speed yellow, court/net cyan, near blue, far red, next step orange. */
+@font-face { font-family: "Barlow Condensed"; font-weight: 500; font-display: swap; src: url("/fonts/barlow-condensed-500.woff2") format("woff2"); }
+@font-face { font-family: "Barlow Condensed"; font-weight: 600; font-display: swap; src: url("/fonts/barlow-condensed-600.woff2") format("woff2"); }
+@font-face { font-family: "Barlow Condensed"; font-weight: 700; font-display: swap; src: url("/fonts/barlow-condensed-700.woff2") format("woff2"); }
 :root {
-  color-scheme: light;
-  --maple: #c8975f;
-  --maple-hi: #d4a56d;
-  --maple-lo: #b9884f;
-  --seam: rgba(74, 44, 16, 0.2);
+  color-scheme: light dark;
+  --maple: #dfc2a6; /* the footage floor's own tone (img/maple-floor.jpg) */
+  --maple-hi: #e8cfb6;
+  --maple-lo: #d3b495;
+  --floor-tint: transparent;
   --ink: #23170c;
-  --ink-soft: #3d2a17;
+  --ink-soft: #4a3420;
+  --chip: rgba(35, 23, 12, 0.08);
+  --chip-line: rgba(35, 23, 12, 0.28);
   --kit: #16171a;
   --kit-2: #1f2125;
   --kit-3: #2a2d33;
@@ -24,7 +29,7 @@
   --court: #22d3ee;
   --near: #60a5fa;
   --far: #f87171;
-  --display: "Bahnschrift", "DIN Alternate", "D-DIN", "Arial Narrow", system-ui, sans-serif;
+  --display: "Barlow Condensed", "Arial Narrow", system-ui, sans-serif;
   --ui: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
   --radius: 4px;
   /* legacy names still read by the page scripts */
@@ -37,6 +42,21 @@
   --label: var(--paint-green);
   --warn: var(--next);
 }
+/* hall at night: the same floor, stained dark under the lights-down hall; kit panels and painted lines unchanged */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --maple: #4a3422;
+    --maple-hi: #56402c;
+    --maple-lo: #3e2b1c;
+    --floor-tint: #3a2818;
+    --ink: #f1e6d6;
+    --ink-soft: #d4c3ad;
+    --chip: rgba(255, 255, 255, 0.07);
+    --chip-line: rgba(255, 255, 255, 0.24);
+    --kit: #111214;
+  }
+  .kit { box-shadow: 0 0 0 1px #2a2c31, 0 6px 18px rgba(0, 0, 0, 0.45); }
+}
 * { box-sizing: border-box; }
 html { scrollbar-color: var(--kit-3) transparent; }
 ::selection { background: var(--paint-white); color: var(--ink); }
@@ -44,12 +64,11 @@ body {
   margin: 0;
   font: 14px/1.45 var(--ui);
   color: var(--ink);
-  background-color: var(--maple);
-  /* planks: long boards with seams every 64px and a slow tonal drift across the hall */
-  background-image:
-    repeating-linear-gradient(180deg, transparent 0 63px, var(--seam) 63px 64px),
-    linear-gradient(90deg, var(--maple-lo), var(--maple-hi) 35%, var(--maple) 60%, var(--maple-lo));
-  background-attachment: fixed;
+  background-color: var(--floor-tint);
+  /* the hall's own maple strip floor, rectified from the Kent footage (provenance in the file) */
+  background-image: url("/img/maple-floor.jpg");
+  background-size: 400px 180px;
+  background-blend-mode: multiply;
   min-height: 100vh;
 }
 a { color: inherit; text-underline-offset: 3px; }
@@ -59,7 +78,7 @@ a { color: inherit; text-underline-offset: 3px; }
 .topbar { display: flex; flex-wrap: wrap; align-items: stretch; gap: 0 28px; padding: 0 20px; background: var(--kit); color: var(--on-kit); border-bottom: 4px solid var(--paint-white); }
 .brand-h { margin: 0; display: flex; }
 .brand { display: flex; align-items: baseline; gap: 10px; margin: 0; padding: 10px 0 8px; font: 700 15px/1 var(--display); text-decoration: none; color: var(--on-kit); }
-.brand-team { font-stretch: condensed; letter-spacing: 0.08em; text-transform: uppercase; }
+.brand-team { font-size: 18px; letter-spacing: 0.08em; text-transform: uppercase; }
 .brand-name { font-size: 22px; font-weight: 600; letter-spacing: -0.01em; color: var(--on-kit-soft); }
 .tabs { display: flex; align-items: stretch; gap: 4px; }
 .tabs a { display: flex; align-items: center; padding: 0 12px; font: 600 14px var(--display); letter-spacing: 0.02em; text-decoration: none; color: var(--on-kit-soft); border-bottom: 4px solid transparent; margin-bottom: -4px; }
@@ -69,15 +88,17 @@ a { color: inherit; text-underline-offset: 3px; }
 /* ---------- bench row: page-level controls on the floor ---------- */
 .bench { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; padding: 12px 20px 4px; color: var(--ink); }
 .bench label { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; }
-.chip { display: inline-flex; align-items: center; gap: 7px; padding: 4px 10px 4px 8px; border-radius: 999px; background: rgba(35, 23, 12, 0.1); border: 1px solid rgba(35, 23, 12, 0.25); cursor: pointer; user-select: none; }
-.chip:hover { background: rgba(35, 23, 12, 0.16); }
+.chip { display: inline-flex; align-items: center; gap: 7px; padding: 4px 10px 4px 8px; border-radius: 999px; background: var(--chip); border: 1px solid var(--chip-line); cursor: pointer; user-select: none; }
+.chip:hover { border-color: var(--ink); }
+.bench button { color: var(--ink); border-color: var(--chip-line); }
+.bench button:hover { border-color: var(--ink); }
 .chip input { margin: 0; accent-color: var(--kit); }
 .swatch { width: 12px; height: 4px; border-radius: 1px; box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35); }
 select, input[type="number"] { font: inherit; color: var(--on-kit); background: var(--kit); border: 1px solid var(--kit); border-radius: var(--radius); padding: 5px 8px; }
 .bench #match, .bench #pick { min-width: 220px; }
 
 /* ---------- court: the main area is fenced by a painted boundary line ---------- */
-main { display: grid; grid-template-columns: minmax(0, 1fr) 400px; gap: 16px; margin: 8px 20px 20px; padding: 14px; border: 4px solid var(--paint-white); border-radius: 2px; }
+main { display: grid; grid-template-columns: minmax(0, 1fr) 400px; gap: 16px; margin: 8px 20px 20px; padding: 14px; border: 6px solid var(--paint-white); border-radius: 2px; }
 @media (max-width: 900px) { main { grid-template-columns: 1fr; margin: 8px 10px 16px; padding: 10px; } }
 .kit { background: var(--kit); color: var(--on-kit); border-radius: var(--radius); box-shadow: 0 6px 18px rgba(40, 22, 6, 0.35); }
 section.player { padding: 12px; align-self: start; }
@@ -109,6 +130,7 @@ video { width: 100%; max-height: calc(100vh - 280px); background: #000; display:
 .status { display: flex; flex-wrap: wrap; gap: 4px 16px; align-items: center; margin-top: 8px; padding: 7px 12px; border-radius: 2px; background: var(--kit-2); min-height: 38px; }
 .status.rec { background: #3a1611; }
 .status.rec .state { color: var(--paint-red); font-weight: 700; }
+.status.rec .state::before { content: ""; display: inline-block; width: 9px; height: 9px; margin-right: 7px; border-radius: 50%; background: var(--paint-red); vertical-align: 0; }
 .state { color: var(--on-kit-soft); }
 .message { font-weight: 600; }
 .message.ok { color: var(--paint-green); }
@@ -122,7 +144,7 @@ button { font: 600 13px var(--ui); display: inline-flex; align-items: center; ga
 button:hover { border-color: var(--on-kit-soft); }
 button:active { background: var(--kit-3); }
 button:disabled { opacity: 0.45; cursor: not-allowed; border-color: var(--kit-line); }
-button.primary { background: var(--paint-white); border-color: var(--paint-white); color: var(--ink); }
+button.primary { background: var(--paint-white); border-color: var(--paint-white); color: #23170c; }
 button.primary:hover { background: #fff; }
 button.approve { border-color: var(--paint-green); color: var(--paint-green); }
 button.small { padding: 2px 7px; font-size: 12px; border-width: 1px; }
@@ -131,7 +153,7 @@ button.small.to-review { color: var(--next); border-color: var(--next); }
 button .icon { width: 14px; height: 14px; flex: none; }
 button.small .icon { width: 12px; height: 12px; }
 kbd { font: 600 10px var(--ui); padding: 1px 5px; border: 1px solid var(--kit-line); border-bottom-width: 2px; border-radius: 3px; color: var(--on-kit-soft); }
-button.primary kbd { border-color: rgba(35, 23, 12, 0.3); color: var(--ink-soft); }
+button.primary kbd { border-color: rgba(35, 23, 12, 0.3); color: #4a3420; }
 
 /* ---------- side panels ---------- */
 .section-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 6px 14px; }
@@ -170,6 +192,7 @@ button.primary kbd { border-color: rgba(35, 23, 12, 0.3); color: var(--ink-soft)
 
 /* ---------- Ball check ---------- */
 main.ballcheck { grid-template-columns: 1fr; }
+main.ballcheck > section { justify-self: start; max-width: 100%; }
 .frame-wrap { position: relative; display: inline-block; max-width: 100%; }
 .frame-wrap img { display: block; max-width: 100%; max-height: calc(100vh - 290px); cursor: crosshair; border-radius: 2px; }
 .marker { position: absolute; width: 22px; height: 22px; margin: -11px 0 0 -11px; border: 2px solid var(--ball); border-radius: 50%; pointer-events: none; box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.6); }
@@ -179,10 +202,12 @@ main.stats { display: block; max-width: 1240px; margin: 8px auto 24px; }
 main.stats > section { margin-bottom: 16px; }
 .sheet { display: flex; flex-wrap: wrap; gap: 6px 26px; align-items: baseline; padding: 14px 18px; }
 .sheet .fig { display: inline-flex; align-items: baseline; gap: 7px; }
-.sheet .fig b { font: 700 24px/1 var(--display); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+.sheet a.fig { text-decoration: none; }
+.sheet a.fig:hover b { text-decoration: underline; text-decoration-thickness: 2px; }
+.sheet .fig b { font: 700 28px/1 var(--display); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
 .sheet .fig span { color: var(--on-kit-soft); }
-.boards { display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 16px; }
-.board { padding: 2px 14px 12px; }
+.boards { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(360px, 100%), 1fr)); gap: 16px; }
+.board { padding: 2px 14px 12px; overflow-x: auto; }
 .board table { width: 100%; border-collapse: collapse; }
 .board th, .board td { padding: 6px 6px; text-align: left; white-space: nowrap; border-bottom: 1px solid var(--kit-2); font-variant-numeric: tabular-nums; }
 .board th { color: var(--on-kit-soft); font: 600 11px var(--ui); letter-spacing: 0.04em; text-transform: uppercase; }

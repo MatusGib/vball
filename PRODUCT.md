@@ -30,7 +30,7 @@ Built around one specific setup and team: a phone on a tripod behind the baselin
 
 - FastAPI backend, vanilla HTML/CSS/JS front end, no build step, no external network needed at run time.
 - Keyboard-driven labelling in the viewer (S/E/N/P/U/A/Esc); element ids are relied on by the JS and the test suite.
-- Light and dark appearance both supported (system preference).
+- Two appearances following the system setting: the hall floor by day (light) and the hall at night (dark); the owner asked for both (2026-10-06).
 - Terminology: rally, serve, set (of a match) vs set (the pass), near end / far end (camera end = near), us / them once the team's end is set.
 - Undecided: per-player stats (needs better tracking), touch/action tagging (phase 2c).
 
