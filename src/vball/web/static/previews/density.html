@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>vball · Preview: High-density module board</title>
+  <style>
+    /* Static look-only preview of the "High-density module board" direction (not the live app). */
+    :root { --red: #d7262e; --ink: #111; --soft: #555; --rule: #c9ced6; --fill: #f3f5f8; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #fff; color: var(--ink); font: 12px/1.35 "Yu Gothic UI", "Meiryo UI", "Segoe UI", system-ui, sans-serif; }
+    .note { background: #fff3f3; color: var(--red); padding: 6px 12px; font-weight: 700; border-bottom: 1px solid var(--red); }
+    .rail { display: flex; flex-wrap: wrap; gap: 0; border-bottom: 1px solid var(--rule); background: var(--fill); }
+    .rail a { padding: 6px 12px; color: var(--ink); text-decoration: none; border-right: 1px solid var(--rule); font-weight: 700; }
+    .rail a.on { background: var(--red); color: #fff; }
+    .rail .meta { margin-left: auto; padding: 6px 12px; color: var(--soft); }
+    .grid { display: grid; grid-template-columns: 2.2fr 1fr 1fr; grid-template-areas: "video labels rallies" "video labels stats" "tools layers stats"; gap: 6px; padding: 6px; }
+    .mod { border: 1px solid var(--rule); background: #fff; }
+    .mod h2 { margin: 0; font-size: 11px; font-weight: 700; padding: 3px 6px; border-bottom: 1px solid var(--rule); background: var(--fill); }
+    .mod h2::before { content: ""; display: inline-block; width: 4px; height: 9px; background: var(--red); margin-right: 5px; vertical-align: -1px; }
+    .video { grid-area: video; } .video img { display: block; width: 100%; }
+    .labels { grid-area: labels; } .rallies { grid-area: rallies; } .stats { grid-area: stats; } .tools { grid-area: tools; } .layers { grid-area: layers; }
+    table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+    td { padding: 2px 6px; border-bottom: 1px dotted var(--rule); }
+    td.r { text-align: right; } td.red { color: var(--red); font-weight: 700; }
+    .tags { display: flex; flex-wrap: wrap; gap: 3px; padding: 6px; }
+    .tags span { border: 1px solid var(--rule); padding: 2px 6px; background: var(--fill); }
+    .tags span.on { border-color: var(--red); color: var(--red); font-weight: 700; background: #fff; }
+    .tape { height: 14px; margin: 4px 6px 6px; background: var(--fill); border: 1px solid var(--rule);
+      background-image: repeating-linear-gradient(90deg, var(--red) 0 6px, transparent 6px 22px, #2b6fd6 22px 26px, transparent 26px 44px); }
+  </style>
+</head>
+<body>
+  <div class="note">Preview only: the "High-density module board" direction drawn around a real Kent set 2 frame. Not the live app; buttons do nothing.</div>
+  <div class="rail"><a class="on" href="#">Viewer</a><a href="#">Ball check</a><a href="#">Stats</a><a href="#">Sources</a><span class="meta">#2 Kent set 2 · 42 rallies · 40/40 approved</span></div>
+  <div class="grid">
+    <section class="mod video"><h2>Video · 1:31 / 25:44</h2><img src="/api/matches/2/frames/20250.jpg" alt="Kent set 2 frame"><div class="tape"></div></section>
+    <section class="mod labels"><h2>Labels 40</h2><table>
+      <tr><td>1</td><td>1:31.2–1:38.3</td><td class="r">7.2s</td><td>OK</td></tr>
+      <tr><td>2</td><td>2:01.4–2:06.1</td><td class="r">4.7s</td><td>OK</td></tr>
+      <tr><td>3</td><td>2:21.1–2:49.8</td><td class="r">28.8s</td><td>OK</td></tr>
+      <tr><td>4</td><td>3:13.3–3:16.6</td><td class="r">3.3s</td><td>OK</td></tr>
+      <tr><td>5</td><td>3:32.4–3:35.8</td><td class="r">3.4s</td><td>OK</td></tr>
+      <tr><td>6</td><td>3:51.0–4:20.4</td><td class="r">29.3s</td><td>OK</td></tr>
+      <tr><td>7</td><td>4:42.9–4:59.0</td><td class="r">16.1s</td><td class="red">CHECK</td></tr>
+    </table></section>
+    <section class="mod rallies"><h2>Detected 42</h2><table>
+      <tr><td>1</td><td>1:31.5</td><td class="r">6.8s</td></tr><tr><td>2</td><td>2:01.1</td><td class="r">4.3s</td></tr>
+      <tr><td>3</td><td>2:24.9</td><td class="r">26.0s</td></tr><tr><td>4</td><td>3:51.1</td><td class="r">29.7s</td></tr>
+    </table></section>
+    <section class="mod stats"><h2>Hardest serves</h2><table>
+      <tr><td>1</td><td>11:15</td><td class="r red">91 km/h</td></tr><tr><td>2</td><td>7:38</td><td class="r">90 km/h</td></tr>
+      <tr><td>3</td><td>20:37</td><td class="r">88 km/h</td></tr><tr><td>4</td><td>21:03</td><td class="r">86 km/h</td></tr>
+    </table></section>
+    <section class="mod tools"><h2>Tools</h2><div class="tags"><span>Prev P</span><span>Next N</span><span class="on">Start S</span><span class="on">End E</span><span>Undo U</span><span class="on">Approve A</span><span>Calibrate</span></div></section>
+    <section class="mod layers"><h2>Layers</h2><div class="tags"><span class="on">Ball</span><span>Court</span><span class="on">Players</span><span>Speed</span></div></section>
+  </div>
+</body>
+</html>

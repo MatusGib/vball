@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>vball · Preview: Hall Scoreboard</title>
+  <style>
+    /* Static look-only preview of the "Hall Scoreboard" direction (not the live app). */
+    :root { --housing: #111214; --panel: #1c1e22; --well: #0a0b0c; --amber: #ffb000; --home: #ff4a3d; --text: #f2f2ee; --soft: #9a9a92; --dot: #24262b; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--housing); color: var(--text); font: 14px/1.45 "Segoe UI", system-ui, sans-serif; }
+    .note { background: #2b2410; color: var(--amber); padding: 8px 18px; font-weight: 600; font-size: 13px; }
+    .top { display: flex; align-items: center; gap: 28px; padding: 10px 18px; border-bottom: 1px solid #26282d; }
+    .top b { font: 700 18px "Bahnschrift", sans-serif; letter-spacing: 0.12em; }
+    .top nav a { color: var(--soft); margin-right: 18px; text-decoration: none; font: 600 14px "Bahnschrift", sans-serif; letter-spacing: 0.06em; text-transform: uppercase; }
+    .top nav a.on { color: var(--amber); }
+    .board { display: grid; grid-template-columns: repeat(5, 1fr); gap: 2px; margin: 14px 18px; background: #000; border: 6px solid #000; border-radius: 6px; }
+    .cell { background: var(--well); padding: 8px 12px 10px; text-align: center;
+      background-image: radial-gradient(circle, var(--dot) 1.2px, transparent 1.6px); background-size: 7px 7px; }
+    .cell small { display: block; color: var(--soft); font: 700 11px "Bahnschrift", sans-serif; letter-spacing: 0.2em; }
+    .led { font: 700 40px/1.1 "Cascadia Mono", Consolas, monospace; color: var(--amber); letter-spacing: 0.06em; font-variant-numeric: tabular-nums; }
+    .led.home { color: var(--home); }
+    .main { display: grid; grid-template-columns: 1fr 360px; gap: 14px; margin: 0 18px 18px; }
+    .video { background: var(--panel); padding: 10px; border-radius: 4px; }
+    .video img { width: 100%; display: block; border-radius: 2px; }
+    .tape { height: 22px; margin-top: 8px; background: #000; border-radius: 2px; position: relative; overflow: hidden;
+      background-image: repeating-linear-gradient(90deg, var(--amber) 0 10px, transparent 10px 34px, var(--amber) 34px 40px, transparent 40px 70px); opacity: 0.85; }
+    .ctrl { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+    .ctrl span { border: 1px solid #3a3d44; border-radius: 3px; padding: 6px 11px; font: 600 13px "Bahnschrift", sans-serif; letter-spacing: 0.05em; text-transform: uppercase; }
+    .ctrl span.go { border-color: var(--amber); color: var(--amber); }
+    .side { background: var(--panel); border-radius: 4px; padding: 6px 14px; }
+    .side h2 { font: 700 13px "Bahnschrift", sans-serif; letter-spacing: 0.16em; color: var(--soft); }
+    .row { display: grid; grid-template-columns: 40px 1fr auto; gap: 8px; padding: 7px 0; border-bottom: 1px solid #26282d; font-variant-numeric: tabular-nums; }
+    .row .n { font: 700 18px "Cascadia Mono", Consolas, monospace; color: var(--amber); }
+    .row .ok { color: #4ade80; font-weight: 700; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <div class="note">Preview only: the "Hall Scoreboard" direction drawn around a real Kent set 2 frame. Not the live app; buttons do nothing.</div>
+  <div class="top"><b>VBALL</b><nav><a class="on" href="#">Viewer</a><a href="#">Ball check</a><a href="#">Stats</a><a href="#">Sources</a></nav></div>
+  <div class="board" aria-label="Scoreboard strip">
+    <div class="cell"><small>SET</small><div class="led">2</div></div>
+    <div class="cell"><small>RALLY</small><div class="led">18<span style="color:var(--soft)">/42</span></div></div>
+    <div class="cell"><small>RALLY CLOCK</small><div class="led">0:07.3</div></div>
+    <div class="cell"><small>BALL KM/H</small><div class="led home">77</div></div>
+    <div class="cell"><small>HEIGHT M</small><div class="led">3.7</div></div>
+  </div>
+  <div class="main">
+    <div class="video">
+      <img src="/api/matches/2/frames/20250.jpg" alt="Kent set 2 frame">
+      <div class="tape"></div>
+      <div class="ctrl"><span>Prev rally</span><span>Next rally</span><span class="go">Mark start</span><span class="go">Mark end</span><span>Undo</span><span class="go">Approve &amp; next</span></div>
+    </div>
+    <div class="side">
+      <h2>LABELS · 40/40 APPROVED</h2>
+      <div class="row"><span class="n">01</span><span>1:31.2 – 1:38.3 · 7.2 s</span><span class="ok">OK</span></div>
+      <div class="row"><span class="n">02</span><span>2:01.4 – 2:06.1 · 4.7 s</span><span class="ok">OK</span></div>
+      <div class="row"><span class="n">03</span><span>2:21.1 – 2:49.8 · 28.8 s</span><span class="ok">OK</span></div>
+      <div class="row"><span class="n">04</span><span>3:13.3 – 3:16.6 · 3.3 s</span><span class="ok">OK</span></div>
+      <div class="row"><span class="n">05</span><span>3:32.4 – 3:35.8 · 3.4 s</span><span class="ok">OK</span></div>
+      <div class="row"><span class="n">06</span><span>3:51.0 – 4:20.4 · 29.3 s</span><span class="ok">OK</span></div>
+    </div>
+  </div>
+</body>
+</html>
