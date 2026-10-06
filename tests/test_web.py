@@ -328,4 +328,6 @@ def test_sources_page_and_list(tmp_path):
     data = json.loads((STATIC_DIR / "sources.json").read_text(encoding="utf-8"))
     for s in data["sources"]:
         assert set(s) >= {"name", "area", "kind", "licence", "status", "link", "what", "use"}
-        assert s["status"] in {"used", "tested", "next", "not tried", "not usable"} and s["link"].startswith("https://")
+        assert s["status"] in {"used", "tested", "next", "needs you", "not tried", "not usable"} and s["link"].startswith("https://")
+        for w in s.get("work", []):
+            assert {"date", "title", "result"} <= set(w) and (not w.get("img") or (STATIC_DIR / w["img"]).exists())
