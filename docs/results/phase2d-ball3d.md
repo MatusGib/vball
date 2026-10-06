@@ -78,6 +78,30 @@ Changes: flights are additionally cut where two quadratics per image axis fit be
 **Viewer:** *Show speed* draws each fitted flight's arc and the ball's current speed and height, frame by frame
 (`GET /api/matches/{id}/flights`, built from `flights.csv` + the camera).
 
+## All 11 sets (2026-10-06)
+
+Courts for sets 3–10 were drafted with `vball courtcopy` (picture shift from a calibrated sister set; 13 px mean
+error against real clicks on Kent 1↔2), then checked and re-saved by the owner; `vball ball3d` ran on every set.
+Serve plausibility here uses the Stats page rule (40–100 km/h, net crossing 2.43–4.5 m, landing within 2 m of the
+court):
+
+| Set | Flights | Fitted | Plausible serves | Hardest | Plausible sets | Rallies (source) |
+|---|---|---|---|---|---|---|
+| Kent 1 | 315 | 75% | 13 / 33 | 94 km/h | 35 | 42 (labels) |
+| Kent 2 | 334 | 80% | 22 / 38 | 91 km/h | 57 | 40 (labels) |
+| Kent 3 | 271 | 81% | 23 / 39 | 92 km/h | 41 | 45 (labels) |
+| Kent 4 | 451 | 80% | 23 / 42 | 96 km/h | 66 | 53 (detected) |
+| Brunel home 1 | 261 | 84% | 19 / 32 | 82 km/h | 42 | 40 (detected) |
+| Brunel home 2 | 457 | 83% | 20 / 40 | 85 km/h | 85 | 46 (detected) |
+| Brunel home 3 | 345 | 77% | 20 / 40 | 93 km/h | 64 | 48 (detected) |
+| Brunel home 4 | 432 | 81% | 21 / 50 | 99 km/h | 83 | 53 (detected) |
+| Brunel away 1 | 331 | 82% | 14 / 35 | 95 km/h | 57 | 38 (detected) |
+| Brunel away 2 | 413 | 79% | 21 / 40 | 84 km/h | 54 | 45 (detected) |
+| Brunel away 3 | 466 | 84% | 19 / 39 | 71 km/h | 80 | 41 (labels) |
+
+About half of the serves found pass the plausibility rule on every set; the Stats page lists only those and says how
+many it left out. Leaderboard rows open the viewer at the moment so each can be checked by eye.
+
 ## Reading so far
 
 - **Serves (speed, net height, landing):** promising — accurate in simulation and plausible in ~2/3 of real serves.
