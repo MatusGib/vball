@@ -96,6 +96,11 @@ From [references/external_data.md](references/external_data.md):
 | Ultralytics YOLO11 + ByteTrack | AGPL-3.0 | Player detection and tracking |
 | VolleyVision YOLOv8m action detector | AGPL-3.0 (README: CC BY-NC-ND) | Did the receivers play the serve (`vball serving`) |
 | VREN rally notation | not stated | Reference rates: 16% of points are serve errors, 5% aces |
+| RF-DETR Medium (Roboflow) | Apache-2.0 | Finds the server in each rally's serve window (`vball serving`) |
+| WASB volleyball weights (vendored model) | MIT | Ball track inside rallies for 3D flights (`vball wasb`) |
+| YOLO11m-pose | AGPL-3.0 | Wrists for touch attribution (experiment) |
+| TU Graz VB14 | cite papers | Action classifier experiment (does not transfer without our labels) |
+| VNL-STES + STES code | dataset with Volleyball World permission; BSD-3 code | Event spotter being trained (phase 2c) |
 
 Not usable: Court-Keypoint-Detection (no weights, data or licence); single-image Roboflow ball sets (the tracker needs consecutive frames). Broadcast-view action datasets are kept for phase 2c.
 
