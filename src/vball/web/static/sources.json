@@ -1,5 +1,5 @@
 {
-  "updated": "2026-10-06",
+  "updated": "2026-10-07",
   "reference": "docs/references/external_data.md",
   "sources": [
     {
@@ -215,9 +215,9 @@
       "use": "Planned for better player tracking (fewer id switches). Needs a CodaLab account: sign up yourself, then Participate → Get Data.",
       "work": [
         {
-          "date": "2026-10-06",
-          "title": "Blocked: needs your CodaLab account",
-          "result": "The data is behind a CodaLab competition sign-up (Participate → Get Data). Once you have it: train ByteTrack/MixSort-style association on its volleyball clips to cut id switches, which per-player stats need."
+          "date": "2026-10-07",
+          "title": "Still blocked: the data is on CodaLab Competitions, not CodaLab Worksheets",
+          "result": "The link you sent is your (empty) CodaLab Worksheets page. SportsMOT is on codalab.lisn.upsaclay.fr: sign up there, open competition 12424, accept the terms under Participate, then Get Data and send me the download link (or the files)."
         }
       ]
     },
@@ -461,15 +461,74 @@
       "area": "Ball",
       "kind": "code + data",
       "licence": "see repo",
-      "status": "needs you",
+      "status": "used",
       "link": "https://github.com/nttcom/WASB-SBDT",
       "what": "Small-ball detection baseline across 5 sports, including volleyball.",
-      "use": "Wanted in the ball benchmark next to VballNet and VolleyVision; blocked until its code (MIT, under 1 MB) may be downloaded.",
+      "use": "Tracks the ball inside rallies for 3D flights (vball wasb, then vball ball3d); our tracker still cuts the rallies.",
       "work": [
         {
-          "date": "2026-10-06",
-          "title": "Blocked: the weights need the WASB code",
-          "result": "You approved the volleyball weights (Google Drive) but not code repos; the model is defined in the repo (MIT, under 1 MB). With the code it can be scored on the clicked ball frames like the others."
+          "date": "2026-10-07",
+          "title": "Volleyball weights scored on the clicked frames (precision / recall)",
+          "result": "The most accurate ball model so far on the Kent camera; poor on the low Brunel away camera (bad video).",
+          "table": {
+            "head": [
+              "Ball model (clicked frames, 15 px)",
+              "Kent 1",
+              "Kent 2",
+              "Kent 3",
+              "Brunel away 3"
+            ],
+            "rows": [
+              [
+                "WASB (whole-set track)",
+                "0.92 / 0.74",
+                "1.00 / 0.85",
+                "0.93 / 0.81",
+                "0.70 / 0.24"
+              ],
+              [
+                "our tracker (default)",
+                "0.72 / 0.68",
+                "0.67 / 0.73",
+                "0.66 / 0.76",
+                "0.87 / 0.66"
+              ]
+            ]
+          }
+        },
+        {
+          "date": "2026-10-07",
+          "title": "What it changes downstream (labelled Kent sets)",
+          "result": "Better ball positions inside rallies fit more 3D flights and give more plausible serves, but WASB also follows the ball between points, which hurts rally cutting. So: our tracker cuts rallies, WASB feeds the 3D flights.",
+          "table": {
+            "head": [
+              "Set",
+              "Rally F1 ours → WASB",
+              "Flights fitted",
+              "Plausible serves"
+            ],
+            "rows": [
+              [
+                "Kent 1",
+                "0.92 → 0.86",
+                "75% → 85%",
+                "13 → 22"
+              ],
+              [
+                "Kent 2",
+                "0.90 → 0.80",
+                "80% → 89%",
+                "22 → 26"
+              ],
+              [
+                "Kent 3",
+                "0.87 → 0.86",
+                "81% → 85%",
+                "23 → 30"
+              ]
+            ]
+          },
+          "doc": "src/vball/ball/wasb.py, third_party/wasb"
         }
       ]
     },
@@ -478,15 +537,20 @@
       "area": "Actions",
       "kind": "dataset + code",
       "licence": "with Volleyball World permission",
-      "status": "needs you",
+      "status": "tested",
       "link": "https://github.com/hoangqnguyen/spot",
       "what": "6,137 frame-accurate events (serve, receive, set, spike, block, score) in 1,028 broadcast rallies.",
-      "use": "The training data for touch / action spotting (phase 2c); blocked on disk space (13 GB download, 16 GB free).",
+      "use": "Downloaded (13 GB, 1,028 rallies, 6,137 events) and the STES model trains on the laptop; training is being sized to the 4 GB GPU.",
       "work": [
         {
-          "date": "2026-10-06",
-          "title": "Blocked: not enough disk space",
-          "result": "The dataset is 13 GB (SharePoint download from the authors); C: has 16 GB free, and unpacking needs about twice that. Free ~30 GB or plug in a drive, then it trains the touch / action spotter (serve, receive, set, spike, block)."
+          "date": "2026-10-07",
+          "title": "Downloaded and the STES code made to run on Windows",
+          "result": "811 / 102 / 115 train / val / test rallies with 4,840 / 511 / 636 events. Three local patches to the STES code (no /dev/stdout, picklable data transforms and worker seeding for Windows) and a no-op wandb; a debug run trains and evaluates end to end."
+        },
+        {
+          "date": "2026-10-07",
+          "title": "Training speed on the RTX 3050",
+          "result": "RegNet-Y 800MF with 64-frame clips: about 4 s per step while sharing the GPU (3,906 steps per epoch, about 4 hours each), so the paper's 150 epochs are out of reach; a smaller run is next."
         }
       ]
     },
@@ -501,9 +565,9 @@
       "use": "Kept for action detection; access needs your request form.",
       "work": [
         {
-          "date": "2026-10-06",
-          "title": "Blocked: access is by request form",
-          "result": "The dataset needs a request form signed by you. Broadcast view; useful later for action tubes (who did which action) if VNL-STES is not enough."
+          "date": "2026-10-07",
+          "title": "Still blocked: request form",
+          "result": "Access is granted by the authors after a form (deeperaction.github.io/datasets/multisports.html → download → request); that has to come from you."
         }
       ]
     },
@@ -512,15 +576,44 @@
       "area": "Actions",
       "kind": "dataset",
       "licence": "cite papers",
-      "status": "not tried",
+      "status": "tested",
       "link": "https://tugraz.at/index.php?id=17751",
       "what": "7 action classes with player boxes per frame.",
-      "use": "Kept for action detection (phase 2c); not downloaded yet.",
+      "use": "Downloaded (6 videos, 13 GB): a per-player action classifier was trained on it; it does not transfer to our gyms without some of our own labels.",
       "work": [
         {
-          "date": "2026-10-06",
-          "title": "Not downloaded yet",
-          "result": "7 action classes with player boxes; not in the download batches you approved today. Ask me to fetch it for the action work (phase 2c)."
+          "date": "2026-10-07",
+          "title": "Per-player action classifier (ResNet-18) on 36,178 annotated player boxes",
+          "result": "Camera behind a baseline like ours. Trained on 5 videos, tested on the sixth: 70% overall.",
+          "table": {
+            "head": [
+              "Action",
+              "stand",
+              "serve",
+              "reception",
+              "setting",
+              "attack",
+              "block",
+              "defence"
+            ],
+            "rows": [
+              [
+                "Right on the unseen video",
+                "96%",
+                "93%",
+                "97%",
+                "36%",
+                "93%",
+                "62%",
+                "24%"
+              ]
+            ]
+          }
+        },
+        {
+          "date": "2026-10-07",
+          "title": "On our footage (Kent 3 contacts, toucher from the nearest wrist)",
+          "result": "Does not transfer: it calls most overhead touches 'block' (the net is behind every far-side touch). Agreement with the touch order (1 = reception, 2 = set, 3 = attack) was 8/58, 1/17, 1/5, and 1 of 5 serves. Needs a few hundred of our own labelled touches to fine-tune."
         }
       ]
     },
@@ -599,15 +692,15 @@
       "area": "Actions",
       "kind": "model code",
       "licence": "see repos",
-      "status": "needs you",
+      "status": "tested",
       "link": "https://github.com/arturxe2/T-DEED",
       "what": "Precise event-spotting and video-clip models.",
-      "use": "Touch / action spotting models for phase 2c; need their code and a dataset (VNL-STES).",
+      "use": "Code downloaded; STES (built on E2E-Spot, compared with T-DEED in its paper: 46.8 vs 30.4 mAP at 0 frames on VNL) is the one being trained.",
       "work": [
         {
-          "date": "2026-10-06",
-          "title": "Blocked: needs the code repos",
-          "result": "Event-spotting models with no volleyball weights; they need their code (T-DEED GPL, 46 MB) and a dataset such as VNL-STES to train. Waiting on the code-repo approval and the disk space for VNL-STES."
+          "date": "2026-10-07",
+          "title": "Code downloaded; STES chosen",
+          "result": "T-DEED publishes no volleyball weights; on VNL its paper numbers are below STES (mAP@0-4F 58.6 vs 68.4), so the laptop's GPU time goes to STES."
         }
       ]
     },
