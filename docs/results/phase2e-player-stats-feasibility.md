@@ -179,3 +179,26 @@ and on Brunel away 1 the far receivers themselves map behind the far baseline (a
 cameras under 1 m the ball decides first (ddecks' trajectory fusion): a near serve is first seen more than 200 px above
 the net tape. Brunel away 3 28 / 30 eye-checked; Brunel away 1 4–33 → 20–17, matching all 14 serves judged by eye; on
 the 1.5 m Kent camera the cue is wrong (19 / 36), so there the players decide.
+
+## The remaining sources (2026-10-07)
+
+The owner freed disk space and approved everything; the low Brunel away camera is to be treated as bad video.
+
+**WASB (ball, MIT, volleyball weights).** On the clicked frames (precision / recall at 15 px): Kent 1 0.92 / 0.74
+(ours 0.72 / 0.68), Kent 2 1.00 / 0.85 (0.67 / 0.73), Kent 3 0.93 / 0.81 (0.66 / 0.76); Brunel away 3 0.70 / 0.24.
+Like VballNet it follows the ball between points, so rally F1 drops (0.92 → 0.86, 0.90 → 0.80, 0.87 → 0.86), but inside
+rallies it fits more 3D flights (75–81% → 85–89%) and gives far more plausible serves. Now `vball wasb <id>` writes
+`ball_wasb.csv` and `vball ball3d` uses it; rallies are still cut from our tracker. Serves in 40–100 km/h after the
+switch: Kent 1–4 70 / 86 / 94 / 70%, Brunel home 1–4 78 / 76 / 86 / 86% (before: about 55–70%).
+
+**TU Graz VB14 (actions).** 36,178 player boxes in 6 Austrian league videos, camera behind a baseline. A ResNet-18 crop
+classifier, trained on 5 videos and tested on the sixth: 70% (stand 96, serve 93, reception 97, setting 36, attack 93,
+block 62, defence 24%). On our Kent 3 contacts it does not transfer: most overhead touches come out as "block"
+(touch-order agreement 8/58, 1/17, 1/5; 1 of 5 serves). It needs some of our own labelled touches.
+
+**VNL-STES + STES (event spotting).** Dataset downloaded (811 / 102 / 115 rallies). The STES code runs on Windows with
+three local patches; RegNet-Y 800MF trained at ~4 s per step while sharing the GPU (~4 h per epoch), so a RegNet-Y
+200MF run of 12 epochs is the laptop-sized attempt.
+
+**T-DEED** code downloaded; no volleyball weights, and below STES on VNL in the STES paper, so not trained.
+**SportsMOT** and **MultiSports** still need the owner (CodaLab Competitions sign-up; request form).
